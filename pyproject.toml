@@ -4,6 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
     "asttokens==3.0.0",
+    "asyncstdlib>=3.13.1",
     "bcs",
     "colorama==0.4.6",
     "comm==0.2.3",
