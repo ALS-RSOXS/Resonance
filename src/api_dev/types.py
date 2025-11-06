@@ -1,4 +1,59 @@
-from typing import Literal, get_args
+from dataclasses import dataclass
+from typing import Dict, List, Literal, Optional, get_args
+
+import pandas as pd
+from uncertainties import ufloat
+
+# ============================================================================
+# Custom Exceptions
+# ============================================================================
+
+
+class RsoxsError(Exception):
+    """Base exception for RSoXS operations"""
+
+    pass
+
+
+class MotorError(RsoxsError):
+    """Motor operation failed"""
+
+    pass
+
+
+class MotorTimeoutError(MotorError):
+    """Motor move did not complete in time"""
+
+    pass
+
+
+class ShutterError(RsoxsError):
+    """Shutter operation failed"""
+
+    pass
+
+
+class AcquisitionError(RsoxsError):
+    """Data acquisition failed"""
+
+    pass
+
+
+class ValidationError(RsoxsError):
+    """Scan plan validation failed"""
+
+    pass
+
+
+class ScanAbortedError(RsoxsError):
+    """Scan was aborted by user"""
+
+    pass
+
+
+# ============================================================================
+# Type Literals
+# ============================================================================
 
 type DIO = Literal[
     "Shutter Rev",
@@ -16,7 +71,6 @@ type DIO = Literal[
     "Shutter Inhibit",
     "Trigger + Inhibit",
 ]
-
 
 
 #  Typing for later
@@ -169,3 +223,54 @@ dio = get_args(DIO.__value__)
 ai = get_args(AI.__value__)
 motor = get_args(Motor.__value__)
 command = get_args(Command.__value__)
+
+# ============================================================================
+# Data Structures
+# ============================================================================
+
+
+@dataclass
+class ScanPoint:
+    """Single point in a scan trajectory"""
+
+    index: int
+    motors: Dict[str, float]  # Motor names -> positions
+    exposure_time: float
+    ai_channels: Optional[List[str]] = None
+    delay_after_move: float = 0.2
+
+    def validate(self) -> None:
+        """Validate motor names and exposure time"""
+        if self.exposure_time <= 0:
+            raise ValidationError(f"Invalid exposure time: {self.exposure_time}")
+
+        # Validate motor names
+        for motor_name in self.motors.keys():
+            if motor_name not in motor:
+                raise ValidationError(f"Invalid motor name: {motor_name}")
+
+
+@dataclass
+class ScanResult:
+    """Results from a scan point with uncertainty"""
+
+    index: int
+    motors: Dict[str, float]
+    ai_data: Dict[str, ufloat]  # Channel name -> ufloat value
+    exposure_time: float
+    timestamp: float
+    raw_data: Dict[str, List[float]]  # For debugging
+
+    def to_series(self) -> pd.Series:
+        """Convert to pandas Series with proper column names"""
+        data = {}
+        # Motor positions
+        for motor_name, pos in self.motors.items():
+            data[f"{motor_name}_position"] = pos
+        # AI data with mean and std
+        for chan, uval in self.ai_data.items():
+            data[f"{chan}_mean"] = uval.nominal_value
+            data[f"{chan}_std"] = uval.std_dev
+        data["exposure"] = self.exposure_time
+        data["timestamp"] = self.timestamp
+        return pd.Series(data)
