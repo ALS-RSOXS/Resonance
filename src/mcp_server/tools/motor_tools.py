@@ -3,7 +3,7 @@
 from typing import Any
 
 from ..connection import connection_manager
-from ..models import MotorListResponse, MotorPositionsResponse, MotorStatusResponse
+from ..models import MotorListResponse, MotorStatusResponse
 
 
 async def list_motors() -> dict[str, Any]:
@@ -21,9 +21,11 @@ async def list_motors() -> dict[str, Any]:
 
         result = await server.list_motors()
         if not result.get("success", False):
-            raise RuntimeError(f"Failed to list motors: {result.get('error description', 'Unknown error')}")
+            raise RuntimeError(
+                f"Failed to list motors: {result.get('error description', 'Unknown error')}"
+            )
 
-        motors = result.get("motors", [])
+        motors = result.get("names", [])
         response = MotorListResponse(motors=motors)
         return response.model_dump()
 
@@ -55,36 +57,11 @@ async def get_motor_positions(motors: list[str] | None = None) -> dict[str, Any]
     try:
         await connection_manager.ensure_connected()
         server = await connection_manager.get_server()
-
         if not motors:
-            list_result = await server.list_motors()
-            if not list_result.get("success", False):
-                error_msg = list_result.get("error description", "Unknown error")
-                raise RuntimeError(f"Failed to list motors: {error_msg}")
-            motors = list_result.get("motors", [])
-
-        if not motors:
-            return MotorPositionsResponse(positions={}).model_dump()
-
-        try:
-            result = await server.motor.table(motors)
-        except KeyError as e:
-            raise ValueError(f"Invalid motor name: {e}") from e
-
-        positions = {}
-
-        for motor_data in result.status.to_dict("records"):
-            motor_name = motor_data.get("motor", "")
-            if not motor_name:
-                continue
-            try:
-                position = motor_data.get("position", 0.0)
-                positions[motor_name] = float(position)
-            except (ValueError, TypeError):
-                positions[motor_name] = 0.0
-
-        response = MotorPositionsResponse(positions=positions)
-        return response.model_dump()
+            list_result = (await server.list_motors())["names"]
+            motors = list_result
+        result = await server.motor.table(motors)
+        return result.status.to_dict()
 
     except (ConnectionError, RuntimeError, ValueError):
         raise

@@ -22,8 +22,8 @@ from .types import AI, DIO, Motor
 class Connection(BaseSettings):
     """Configuration for BCS server connection from environment variables."""
 
-    addr: str = Field(alias="BCS_SERVER_ADDRESS")
-    port: int = Field(alias="BCS_SERVER_PORT")
+    addr: str = Field(default="localhost", alias="BCS_SERVER_ADDRESS")
+    port: int = Field(default=5577, alias="BCS_SERVER_PORT")
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 

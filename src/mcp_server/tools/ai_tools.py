@@ -23,9 +23,11 @@ async def list_ai_channels() -> dict[str, Any]:
 
         result = await server.list_ais()
         if not result.get("success", False):
-            raise RuntimeError(f"Failed to list AI channels: {result.get('error description', 'Unknown error')}")
+            raise RuntimeError(
+                f"Failed to list AI channels: {result.get('error description', 'Unknown error')}"
+            )
 
-        channels = result.get("chans", [])
+        channels = result.get("names", [])
         response = AIChannelResponse(channels=channels)
         return response.model_dump()
 
@@ -63,7 +65,7 @@ async def get_ai_values(channels: list[str] | None = None) -> dict[str, Any]:
             if not list_result.get("success", False):
                 error_msg = list_result.get("error description", "Unknown error")
                 raise RuntimeError(f"Failed to list AI channels: {error_msg}")
-            channels = list_result.get("chans", [])
+            channels = list_result.get("names", [])
 
         if not channels:
             return AIValuesResponse(values={}).model_dump()
@@ -75,8 +77,8 @@ async def get_ai_values(channels: list[str] | None = None) -> dict[str, Any]:
 
         values = {}
 
-        for chan_data in result.status.to_dict("records"):
-            chan_name = chan_data.get("chan", "")
+        for chan_data in result.status.to_dict():
+            chan_name = chan_data.get("names", "")
             if not chan_name:
                 continue
             data_array = chan_data.get("data", [])
@@ -129,7 +131,9 @@ async def get_ai_with_uncertainty(
             raise ValueError("acquisition_time must be positive")
 
         ai_channels = cast(list[AI], channels)
-        ufloat_data = await server.ai.get_with_uncertainty(keys=ai_channels, acquisition_time=acquisition_time)
+        ufloat_data = await server.ai.get_with_uncertainty(
+            keys=ai_channels, acquisition_time=acquisition_time
+        )
 
         values = {}
         for chan, uval in ufloat_data.items():
