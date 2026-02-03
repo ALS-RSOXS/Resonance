@@ -59,12 +59,19 @@ dependencies = [
     "wcwidth==0.2.13",
 ]
 
+[project.scripts]
+mcp-beamline = "mcp_server.__main__:main"
+
 [build-system]
-requires = ["uv_build>=0.9.4,<0.10.0"]
-build-backend = "uv_build"
+requires = ["setuptools>=80.9.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.uv.sources]
-bcs = { git = "https://github.com/ALS-RSOXS/bcs-install" }
+# bcs = { git = "https://github.com/ALS-RSOXS/bcs-install" }
+bcs = { path = "C:/bcs-install"}
 
 [dependency-groups]
 dev = [

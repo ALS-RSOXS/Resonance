@@ -93,7 +93,7 @@ dev = [
 requires-dist = [
     { name = "asttokens", specifier = "==3.0.0" },
     { name = "asyncstdlib", specifier = ">=3.13.1" },
-    { name = "bcs", git = "https://github.com/ALS-RSOXS/bcs-install" },
+    { name = "bcs", directory = "../../../bcs-install" },
     { name = "colorama", specifier = "==0.4.6" },
     { name = "comm", specifier = "==0.2.3" },
     { name = "contourpy", specifier = "==1.3.3" },
@@ -189,7 +189,11 @@ wheels = [
 [[package]]
 name = "bcs"
 version = "0.1.0"
-source = { git = "https://github.com/ALS-RSOXS/bcs-install#53bfd955883601877942b7156d03f8fb5a0479a9" }
+source = { directory = "../../../bcs-install" }
+
+[package.metadata]
+requires-dist = [{ name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1.300" }]
+provides-extras = ["dev"]
 
 [[package]]
 name = "certifi"

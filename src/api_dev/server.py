@@ -16,7 +16,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .accessors import RsoxsAccessor
 from .scan import ScanExecutor, ScanPlan
-from .types import AI, DIO, Motor
+from .types import AI, DIO, Motor, Instrument
 
 
 class Connection(BaseSettings):
@@ -73,7 +73,7 @@ class RsoxsServer(BCSz.BCSServer):
     def __init__(self):
         super().__init__()
 
-        self.ccd_ready: bool = False
+        self.detector_ready: bool = False
 
         # Type-safe accessors
         self.ai = RsoxsAccessor[AI](self, AI, readonly=True)
@@ -120,7 +120,7 @@ class RsoxsServer(BCSz.BCSServer):
 
     # -------- Instrument Setup Methods --------
 
-    async def setup_ccd(self) -> None:
+    async def setup_detector(self, detector: Instrument) -> None:
         """
         Setup the CCD camera for data acquisition.
 
@@ -131,67 +131,13 @@ class RsoxsServer(BCSz.BCSServer):
         RuntimeError
             If CCD status check fails
         """
-        if self.ccd_ready:
+        if self.detector_ready:
             return
 
-        res = await self.get_instrument_driver_status(name="CCD")
+        res = await self.get_instrument_driver_status(name=detector)
         if not res["success"]:
             raise RuntimeError(f"Failed to get CCD status: {res['error description']}")
-        self.ccd_ready = res["running"]
-
-    async def _set_ccd_temp(self, target_temp: float = -40.0) -> None:
-        """
-        Set and wait for CCD temperature to stabilize.
-
-        Parameters
-        ----------
-        target_temp : float, optional
-            Target temperature in Celsius (default: -40.0)
-
-        Raises
-        ------
-        RuntimeError
-            If CCD is not setup
-        TimeoutError
-            If temperature does not stabilize in time
-        """
-        if not self.ccd_ready:
-            raise RuntimeError("CCD is not setup. Call setup_ccd() first.")
-
-        current_temp = (await self.get_state_variable("Camera Temp"))["numeric_value"]
-        set_temp = (await self.get_state_variable("Camera Temp Setpoint"))[
-            "numeric_value"
-        ]
-
-        if set_temp > target_temp:
-            print(f"Camera temperature setpoint too high, setting to {target_temp}C")
-            set_temp = target_temp
-            await self.set_state_variable("Camera Temp Setpoint", target_temp)
-
-        # Wait for camera to reach target temperature
-        tolerance = 1.0  # Temperature tolerance in degrees C
-        max_wait_time = 300  # Maximum wait time in seconds
-        check_interval = 2  # Check every 2 seconds
-
-        elapsed_time = 0
-        while abs(current_temp - set_temp) > tolerance:
-            if elapsed_time >= max_wait_time:
-                raise TimeoutError(
-                    f"Camera temperature did not stabilize within {max_wait_time}s. "
-                    f"Current: {current_temp}C, Target: {set_temp}C"
-                )
-
-            await asyncio.sleep(check_interval)
-            elapsed_time += check_interval
-            current_temp = (await self.get_state_variable("Camera Temp"))[
-                "numeric_value"
-            ]
-            print(
-                f"Waiting for camera to cool... "
-                f"Current: {current_temp:.1f}C, Target: {set_temp}C"
-            )
-
-        print(f"Camera temperature stabilized at {current_temp:.1f}C")
+        self.detector_ready = res["running"]
 
     # -------- High-Level Scan Methods --------
 

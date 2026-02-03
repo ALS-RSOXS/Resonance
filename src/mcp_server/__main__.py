@@ -4,8 +4,13 @@ import sys
 
 from .server import mcp
 
-if __name__ == "__main__":
+
+def main() -> None:
     try:
         mcp.run()
     except KeyboardInterrupt:
         sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
