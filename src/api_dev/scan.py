@@ -12,6 +12,10 @@ from .core import AbortFlag, motor_move, shutter_control, wait_for_settle
 from .types import Instrument, ScanAbortedError, ScanPoint, ScanResult
 from .validation import validate_scan_dataframe
 
+MOTOR_MOVE_TIME_PER_POINT = 0.1
+API_PROCESSING_TIME_PER_POINT = 0.5
+
+
 # ============================================================================
 # Scan Plan
 # ============================================================================
@@ -33,6 +37,7 @@ class ScanPlan:
         self.motor_names = motor_names
         self.ai_channels = ai_channels
         self.shutter = shutter
+        self.actuate_every = actuate_every
 
     @classmethod
     def from_dataframe(
@@ -42,7 +47,8 @@ class ScanPlan:
         default_exposure: float = 1.0,
         default_delay: float = 0.2,
         shutter: str = "Light Output",
-        instrument: Instrument = "Photodiode", #TODO: rename instrument to
+        instrument: Instrument = "Photodiode",
+        actuate_every: bool = False,
     ) -> "ScanPlan":
         """
         Build validated scan plan from DataFrame.
@@ -53,6 +59,7 @@ class ScanPlan:
             default_exposure: Exposure time if no column found
             default_delay: Delay after motor move
             shutter: Shutter channel name
+            actuate_every: If True, open/close shutter per point; if False, open once for whole scan
 
         Returns:
             Validated ScanPlan
@@ -94,6 +101,7 @@ class ScanPlan:
             motor_names=motor_cols,
             ai_channels=ai_channels,
             shutter=shutter,
+            actuate_every=actuate_every,
         )
 
     def __len__(self) -> int:
@@ -101,6 +109,75 @@ class ScanPlan:
 
     def __iter__(self):
         return iter(self.points)
+
+    def estimated_duration_seconds(
+        self,
+        motor_time: float = MOTOR_MOVE_TIME_PER_POINT,
+        api_time: float = API_PROCESSING_TIME_PER_POINT,
+    ) -> float:
+        """
+        Compute estimated scan duration.
+
+        Per point: motor_time + api_time + exposure_time + delay_after_move
+        (defaults: 0.1 s + 0.5 s + exposure + delay per point).
+
+        Parameters
+        ----------
+        motor_time : float
+            Time per point for motor movements (default 0.1 s).
+        api_time : float
+            Time per point for API processing (default 0.5 s).
+
+        Returns
+        -------
+        float
+            Total estimated duration in seconds.
+        """
+        total = 0.0
+        for p in self.points:
+            total += motor_time + api_time + p.exposure_time + p.delay_after_move
+        return total
+
+    def describe(
+        self,
+        motor_time: float = MOTOR_MOVE_TIME_PER_POINT,
+        api_time: float = API_PROCESSING_TIME_PER_POINT,
+    ) -> None:
+        """
+        Print a summary of the scan plan including unique values and estimated duration.
+
+        Parameters
+        ----------
+        motor_time : float
+            Time per point for motor movements (default 0.1 s).
+        api_time : float
+            Time per point for API processing (default 0.5 s).
+        """
+        lines: List[str] = []
+        lines.append(f"Scan plan: {len(self.points)} points, {len(self.motor_names)} motors")
+        lines.append("")
+        lines.append("Unique values:")
+        for m in self.motor_names:
+            n = len({p.motors[m] for p in self.points})
+            lines.append(f"  {m}: {n}")
+        n_exp = len({p.exposure_time for p in self.points})
+        lines.append(f"  exposure: {n_exp}")
+        n_delay = len({p.delay_after_move for p in self.points})
+        delay_val = self.points[0].delay_after_move if self.points else 0
+        lines.append(f"  delay: {n_delay} ({delay_val} s)")
+        lines.append("")
+        duration = self.estimated_duration_seconds(motor_time=motor_time, api_time=api_time)
+        minutes = duration / 60.0
+        hours = duration / 3600.0
+        if hours >= 1:
+            time_str = f"{hours:.1f} h ({duration:.0f} s)"
+        elif minutes >= 1:
+            time_str = f"{minutes:.1f} min ({duration:.0f} s)"
+        else:
+            time_str = f"{duration:.1f} s"
+        lines.append(f"Estimated duration: {time_str}")
+        lines.append(f"  per point: {motor_time} s (motor) + {api_time} s (api) + exposure + {delay_val} s (delay)")
+        print("\n".join(lines))
 
 
 # ============================================================================
@@ -125,6 +202,7 @@ class ScanExecutor:
         point: ScanPoint,
         motor_timeout: float = 30.0,
         restore_motors: bool = False,
+        use_shutter: bool = True,
     ) -> ScanResult:
         """
         Execute a single scan point with full error handling.
@@ -133,6 +211,7 @@ class ScanExecutor:
             point: Scan point to execute
             motor_timeout: Timeout for motor moves
             restore_motors: Whether to restore motor positions after point
+            use_shutter: If True, open/close shutter for this point; if False, assume shutter already open
 
         Returns:
             ScanResult with ufloat values
@@ -154,41 +233,38 @@ class ScanExecutor:
             # Wait for settling
             await wait_for_settle(point.delay_after_move, self.abort_flag)
 
-            # Open shutter, collect data, close shutter
-            async with shutter_control(
-                self.server, shutter=self.current_scan.shutter, delay_before_open=0
-            ):
-                # Check abort before acquisition
+            async def _acquire() -> dict:
                 if await self.abort_flag.is_set():
                     raise ScanAbortedError("Scan aborted before acquisition")
-
-                # Acquire data
                 await self.server.acquire_data(
                     chans=point.ai_channels or self.current_scan.ai_channels,
                     time=point.exposure_time,
                 )
-
-                # Get array data
-                result = await self.server.get_acquired_array(
+                return await self.server.get_acquired_array(
                     chans=point.ai_channels or self.current_scan.ai_channels
                 )
 
-                # Calculate statistics with uncertainty
-                ai_data = {}
-                raw_data = {}
+            if use_shutter:
+                async with shutter_control(
+                    self.server, shutter=self.current_scan.shutter, delay_before_open=0
+                ):
+                    result = await _acquire()
+            else:
+                result = await _acquire()
 
-                for chan_data in result["chans"]:
-                    chan_name = chan_data["chan"]
-                    data = np.array(chan_data["data"], dtype=float)
-                    raw_data[chan_name] = data.tolist()
+            ai_data = {}
+            raw_data = {}
+            for chan_data in result["chans"]:
+                chan_name = chan_data["chan"]
+                data = np.array(chan_data["data"], dtype=float)
+                raw_data[chan_name] = data.tolist()
 
-                    if len(data) == 0:
-                        ai_data[chan_name] = ufloat(np.nan, np.nan)
-                    else:
-                        mean = np.nanmean(data)
-                        # Standard error of the mean
-                        std_err = np.nanstd(data, ddof=1) / np.sqrt(len(data))
-                        ai_data[chan_name] = ufloat(mean, std_err)
+                if len(data) == 0:
+                    ai_data[chan_name] = ufloat(np.nan, np.nan)
+                else:
+                    mean = np.nanmean(data)
+                    std_err = np.nanstd(data, ddof=1) / np.sqrt(len(data))
+                    ai_data[chan_name] = ufloat(mean, std_err)
 
         # Create result
         return ScanResult(
@@ -234,13 +310,23 @@ class ScanExecutor:
         else:
             iterator = scan_plan.points
 
-        try:
+        async def _run_points() -> None:
             for i, point in enumerate(iterator):
                 if not progress:
                     print(f"Point {i + 1}/{len(scan_plan.points)}", end="\r")
-
-                result = await self.execute_point(point, restore_motors=False)
+                result = await self.execute_point(
+                    point, restore_motors=False, use_shutter=scan_plan.actuate_every
+                )
                 results.append(result)
+
+        try:
+            if scan_plan.actuate_every:
+                await _run_points()
+            else:
+                async with shutter_control(
+                    self.server, shutter=scan_plan.shutter, delay_before_open=0
+                ):
+                    await _run_points()
 
         except ScanAbortedError:
             print(f"\nScan aborted after {len(results)}/{len(scan_plan.points)} points")

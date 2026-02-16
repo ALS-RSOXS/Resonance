@@ -149,7 +149,7 @@ class RsoxsServer(BCSz.BCSServer):
         shutter: DIO = "Shutter Output",
         motor_timeout: float = 30.0,
         progress: bool = True,
-        actuate_every: bool = True,
+        actuate_every: bool = False,
     ) -> pd.DataFrame:
         """
         Execute a scan defined by a DataFrame with automatic uncertainty.
@@ -173,6 +173,8 @@ class RsoxsServer(BCSz.BCSServer):
             Timeout for motor moves in seconds (default: 30.0)
         progress : bool, optional
             Show progress bar (default: True)
+        actuate_every : bool, optional
+            If True, open/close shutter per point; if False, open once for whole scan (default: False)
 
         Returns
         -------
@@ -202,6 +204,7 @@ class RsoxsServer(BCSz.BCSServer):
             ai_channels=ai_channels or [],
             default_delay=default_delay,
             shutter=shutter,
+            actuate_every=actuate_every,
         )
 
         # Execute scan
