@@ -4,8 +4,8 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from periodictable import xsf
 import pint
+from periodictable import xsf
 from scipy.optimize import curve_fit
 
 ureg = pint.UnitRegistry()
@@ -30,7 +30,9 @@ class NexafsDirectory:
         elif isinstance(pre_edge, (tuple, list)) and len(pre_edge) == 2:
             self.pre_edge = (pre_edge[0], pre_edge[1])
         else:
-            raise ValueError("pre_edge must be a float, int, or length-2 (min, max) tuple/list.")
+            raise ValueError(
+                "pre_edge must be a float, int, or length-2 (min, max) tuple/list."
+            )
 
     def set_post(self, post_edge):
         if isinstance(post_edge, (int, float)):
@@ -38,7 +40,9 @@ class NexafsDirectory:
         elif isinstance(post_edge, (tuple, list)) and len(post_edge) == 2:
             self.post_edge = (post_edge[0], post_edge[1])
         else:
-            raise ValueError("post_edge must be a float, int, or length-2 (min, max) tuple/list.")
+            raise ValueError(
+                "post_edge must be a float, int, or length-2 (min, max) tuple/list."
+            )
 
     @staticmethod
     def read_nexafs(file_path: Path) -> pd.DataFrame:
@@ -50,6 +54,7 @@ class NexafsDirectory:
         if header_idx is None:
             raise ValueError(f"Could not find 'Time of Day' header in {file_path}")
         from io import StringIO
+
         table_text = "".join(lines[header_idx:])
         df = pd.read_csv(StringIO(table_text), sep=r"\t", engine="python")
         df["Beamline Energy"] = df["Beamline Energy"].round(1)
@@ -124,7 +129,7 @@ class NexafsDirectory:
         if not self.izero_store:
             return None
         candidates = []
-        sample_min, sample_max = (energy_range or (0, np.inf))
+        sample_min, sample_max = energy_range or (0, np.inf)
         for ts, entry in self.izero_store.items():
             e_min, e_max = entry["energy_min"], entry["energy_max"]
             if energy_range and (sample_max < e_min or sample_min > e_max):
@@ -136,7 +141,10 @@ class NexafsDirectory:
             dt = abs((ts - sample_timestamp).total_seconds())
             candidates.append((dt, ts))
         if not candidates:
-            candidates = [(abs((ts - sample_timestamp).total_seconds()), ts) for ts in self.izero_store]
+            candidates = [
+                (abs((ts - sample_timestamp).total_seconds()), ts)
+                for ts in self.izero_store
+            ]
         candidates.sort(key=lambda x: x[0])
         return candidates[0][1] if candidates else None
 
@@ -165,7 +173,9 @@ class NexafsDirectory:
             self._selected_izero_timestamp = None
         else:
             if timestamp not in self.izero_store:
-                raise ValueError(f"Timestamp {timestamp} not found in available izero scans.")
+                raise ValueError(
+                    f"Timestamp {timestamp} not found in available izero scans."
+                )
             self._selected_izero_timestamp = timestamp
 
     def set_izero_nearest(
@@ -189,12 +199,14 @@ class NexafsDirectory:
         rows = []
         for ts in sorted(self.izero_store):
             entry = self.izero_store[ts]
-            rows.append({
-                "timestamp": ts,
-                "energy_min": entry["energy_min"],
-                "energy_max": entry["energy_max"],
-                "epu_polarization": entry.get("epu_polarization"),
-            })
+            rows.append(
+                {
+                    "timestamp": ts,
+                    "energy_min": entry["energy_min"],
+                    "energy_max": entry["energy_max"],
+                    "epu_polarization": entry.get("epu_polarization"),
+                }
+            )
         return pd.DataFrame(rows)
 
     def list_samples(self):
@@ -218,7 +230,9 @@ class NexafsDirectory:
             try:
                 angle = float(split[-2].strip("deg"))
                 experiment_hash = int(split[-1])
-                files.append({"file": file, "angle": angle, "experiment": experiment_hash})
+                files.append(
+                    {"file": file, "angle": angle, "experiment": experiment_hash}
+                )
             except Exception:
                 continue
         return files
@@ -267,7 +281,9 @@ class NexafsDirectory:
         return mu_converted.magnitude
 
     @staticmethod
-    def build_mu_arrays(energy: np.ndarray, formula: str, units: str = "g/cm^2") -> dict[str, np.ndarray]:
+    def build_mu_arrays(
+        energy: np.ndarray, formula: str, units: str = "g/cm^2"
+    ) -> dict[str, np.ndarray]:
         """
         Precompute mu arrays for chemical formula, Si, and O at given energies.
 
@@ -301,7 +317,9 @@ class NexafsDirectory:
             elif region[0] is not None and region[1] is None:
                 mask = energy >= region[0]
             else:
-                raise ValueError("At least one endpoint for pre_edge must be specified.")
+                raise ValueError(
+                    "At least one endpoint for pre_edge must be specified."
+                )
         elif edge_type == "post":
             if region[0] is not None and region[1] is not None:
                 mask = (energy >= region[0]) & (energy <= region[1])
@@ -310,7 +328,9 @@ class NexafsDirectory:
             elif region[0] is None and region[1] is not None:
                 mask = energy <= region[1]
             else:
-                raise ValueError("At least one endpoint for post_edge must be specified.")
+                raise ValueError(
+                    "At least one endpoint for post_edge must be specified."
+                )
         else:
             raise ValueError("edge_type must be 'pre' or 'post'")
         return df[mask]
@@ -348,7 +368,11 @@ class NexafsDirectory:
         post_bare = df_post["Bare Atom Step"].median()
         pre_bare = df_pre["Bare Atom Step"].median()
         edge_jump_bare = post_bare - pre_bare
-        scale = edge_jump_bare / edge_jump_normabs if not np.isclose(edge_jump_normabs, 0) else 1.0
+        scale = (
+            edge_jump_bare / edge_jump_normabs
+            if not np.isclose(edge_jump_normabs, 0)
+            else 1.0
+        )
         df["Mass Abs."] = df["Norm Abs"] * scale
         return df
 
@@ -363,15 +387,19 @@ class NexafsDirectory:
         if isinstance(post, (int, float)):
             post = (post, None)
         post = tuple(post)
-        post_region_len = [len(self._parse_edge_region(df, post, edge_type="post")) for df in dfs]
+        post_region_len = [
+            len(self._parse_edge_region(df, post, edge_type="post")) for df in dfs
+        ]
         min_post_points = 5
         complete_mask = np.array([n >= min_post_points for n in post_region_len])
         complete_dfs = [df for df, c in zip(dfs, complete_mask) if c]
         if len(complete_dfs) == 0:
-            all_pre = pd.concat([
-                self._parse_edge_region(df, pre, edge_type="pre").assign(idx=i)
-                for i, df in enumerate(dfs)
-            ])
+            all_pre = pd.concat(
+                [
+                    self._parse_edge_region(df, pre, edge_type="pre").assign(idx=i)
+                    for i, df in enumerate(dfs)
+                ]
+            )
             xpre = all_pre["Energy"].to_numpy()
             ypre = all_pre["PD Corrected"].to_numpy()
             barepre = all_pre["Bare Atom"].to_numpy()
@@ -386,10 +414,12 @@ class NexafsDirectory:
             for df in dfs:
                 df["Mass Abs."] = df.get("Norm Abs", df["PD Corrected"].copy())
             return dfs
-        all_pre = pd.concat([
-            self._parse_edge_region(df, pre, edge_type="pre").assign(idx=i)
-            for i, df in enumerate(complete_dfs)
-        ])
+        all_pre = pd.concat(
+            [
+                self._parse_edge_region(df, pre, edge_type="pre").assign(idx=i)
+                for i, df in enumerate(complete_dfs)
+            ]
+        )
         xpre = all_pre["Energy"].to_numpy()
         ypre = all_pre["PD Corrected"].to_numpy()
         barepre = all_pre["Bare Atom"].to_numpy()
@@ -402,28 +432,44 @@ class NexafsDirectory:
             baseline_bare = coef_bare * df["Energy"] + intercept_bare
             df["Norm Abs"] = df["PD Corrected"] - baseline
             df["Bare Atom Step"] = df["Bare Atom"] - baseline_bare
-        pre_norm = pd.concat([
-            self._parse_edge_region(df, pre, edge_type="pre")[["Norm Abs", "Bare Atom Step"]]
-            for df in complete_dfs
-        ])
-        post_norm = pd.concat([
-            self._parse_edge_region(df, post, edge_type="post")[["Norm Abs", "Bare Atom Step"]]
-            for df in complete_dfs
-        ])
+        pre_norm = pd.concat(
+            [
+                self._parse_edge_region(df, pre, edge_type="pre")[
+                    ["Norm Abs", "Bare Atom Step"]
+                ]
+                for df in complete_dfs
+            ]
+        )
+        post_norm = pd.concat(
+            [
+                self._parse_edge_region(df, post, edge_type="post")[
+                    ["Norm Abs", "Bare Atom Step"]
+                ]
+                for df in complete_dfs
+            ]
+        )
         pre_median_normabs = pre_norm["Norm Abs"].median()
         post_median_normabs = post_norm["Norm Abs"].median()
         edge_jump_normabs = post_median_normabs - pre_median_normabs
         pre_median_bare = pre_norm["Bare Atom Step"].median()
         post_median_bare = post_norm["Bare Atom Step"].median()
         edge_jump_bare = post_median_bare - pre_median_bare
-        scale = edge_jump_bare / edge_jump_normabs if not np.isclose(edge_jump_normabs, 0) else 1.0
+        scale = (
+            edge_jump_bare / edge_jump_normabs
+            if not np.isclose(edge_jump_normabs, 0)
+            else 1.0
+        )
         E0 = pre[1] if pre[1] is not None else pre[0]
         post_first = self._parse_edge_region(complete_dfs[0], post, edge_type="post")
         k = 0.0
         if len(post_first) >= 2:
             E_post = post_first["Energy"].to_numpy()
-            slope_bare = np.polyfit(E_post, post_first["Bare Atom Step"].to_numpy(), 1)[0]
-            slope_massabs = np.polyfit(E_post, (post_first["Norm Abs"].to_numpy() * scale), 1)[0]
+            slope_bare = np.polyfit(E_post, post_first["Bare Atom Step"].to_numpy(), 1)[
+                0
+            ]
+            slope_massabs = np.polyfit(
+                E_post, (post_first["Norm Abs"].to_numpy() * scale), 1
+            )[0]
             k = slope_bare - slope_massabs
         for i, df in enumerate(dfs):
             if complete_mask[i]:
@@ -454,17 +500,25 @@ class NexafsDirectory:
         all_dfs = []
         all_summaries = []
         for s in samples:
-            dfs = self.get_sample_dfs(s, formula=formula, pre_edge=pre_edge, post_edge=post_edge)
+            dfs = self.get_sample_dfs(
+                s, formula=formula, pre_edge=pre_edge, post_edge=post_edge
+            )
             dfs, summary = self.fit_background_subtraction(
                 dfs, formula=formula, pre_edge=pre_edge, post_edge=post_edge, mode=mode
             )
             all_dfs.extend(dfs)
             all_summaries.append(summary)
         combined = pd.concat(all_dfs, ignore_index=True) if all_dfs else pd.DataFrame()
-        summary_combined = pd.concat(all_summaries, ignore_index=True) if all_summaries else pd.DataFrame()
+        summary_combined = (
+            pd.concat(all_summaries, ignore_index=True)
+            if all_summaries
+            else pd.DataFrame()
+        )
         return combined, summary_combined
 
-    def get_sample_dfs(self, sample_name, formula: str = "C8H8", pre_edge=None, post_edge=None):
+    def get_sample_dfs(
+        self, sample_name, formula: str = "C8H8", pre_edge=None, post_edge=None
+    ):
         files = self.get_sample_file_info(sample_name)
         if files:
             first_df = self.read_nexafs(files[0]["file"])
@@ -499,7 +553,9 @@ class NexafsDirectory:
     def process_all(self, formula: str = "C8H8", pre_edge=None, post_edge=None):
         dataset_records = []
         for sample_name in self.list_samples():
-            dfs = self.get_sample_dfs(sample_name, formula=formula, pre_edge=pre_edge, post_edge=post_edge)
+            dfs = self.get_sample_dfs(
+                sample_name, formula=formula, pre_edge=pre_edge, post_edge=post_edge
+            )
             for df in dfs:
                 record = df.copy()
                 record["Sample"] = sample_name
@@ -529,14 +585,28 @@ class NexafsDirectory:
         apply_si_subtraction: bool = False,
         normalization_mode: str = "si_only",
     ):
-        dfs = self.get_sample_dfs(sample_name, formula=formula, pre_edge=pre_edge, post_edge=post_edge)
+        dfs = self.get_sample_dfs(
+            sample_name, formula=formula, pre_edge=pre_edge, post_edge=post_edge
+        )
         if apply_si_subtraction:
             pre = pre_edge if pre_edge is not None else self.pre_edge
             post = post_edge if post_edge is not None else self.post_edge
-            pre_val = float(pre) if isinstance(pre, (int, float)) else (pre[1] if pre[1] is not None else 284.0)
-            post_val = float(post) if isinstance(post, (int, float)) else (post[0] if post[0] is not None else 320.0)
+            pre_val = (
+                float(pre)
+                if isinstance(pre, (int, float))
+                else (pre[1] if pre[1] is not None else 284.0)
+            )
+            post_val = (
+                float(post)
+                if isinstance(post, (int, float))
+                else (post[0] if post[0] is not None else 320.0)
+            )
             dfs, _ = self.fit_background_subtraction(
-                dfs, formula=formula, pre_edge=pre_val, post_edge=post_val, mode=normalization_mode
+                dfs,
+                formula=formula,
+                pre_edge=pre_val,
+                post_edge=post_val,
+                mode=normalization_mode,
             )
             if ycol == "Mass Abs.":
                 ycol = "Si-subtracted"
@@ -557,7 +627,15 @@ class NexafsDirectory:
         ax.set_xlabel("Energy")
         ax.set_ylabel(ycol)
         ax.set_title(f"Sample: {sample_name}")
-        ax.legend(title="Angle", handlelength=0.5, fontsize=10, ncol=2, frameon=True, fancybox=False, framealpha=1)
+        ax.legend(
+            title="Angle",
+            handlelength=0.5,
+            fontsize=10,
+            ncol=2,
+            frameon=True,
+            fancybox=False,
+            framealpha=1,
+        )
         plt.colorbar(sm, ax=ax, pad=0.02).set_label("Angle (deg)")
         ax.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
         return ax
@@ -589,17 +667,32 @@ class NexafsDirectory:
                 all_resid_pre.append(r.loc[pre_df.index])
             if len(post_df):
                 all_resid_post.append(r.loc[post_df.index])
-        concat_pre = pd.concat(all_resid_pre) if all_resid_pre else pd.Series(dtype=float)
-        concat_post = pd.concat(all_resid_post) if all_resid_post else pd.Series(dtype=float)
-        rms_pre = float(np.sqrt(np.mean(concat_pre ** 2))) if len(concat_pre) else np.nan
-        rms_post = float(np.sqrt(np.mean(concat_post ** 2))) if len(concat_post) else np.nan
+        concat_pre = (
+            pd.concat(all_resid_pre) if all_resid_pre else pd.Series(dtype=float)
+        )
+        concat_post = (
+            pd.concat(all_resid_post) if all_resid_post else pd.Series(dtype=float)
+        )
+        rms_pre = float(np.sqrt(np.mean(concat_pre**2))) if len(concat_pre) else np.nan
+        rms_post = (
+            float(np.sqrt(np.mean(concat_post**2))) if len(concat_post) else np.nan
+        )
         if scale_ref_percent is None and len(dfs) > 0:
-            post_ref = pd.concat([
-                self._parse_edge_region(df, post, edge_type="post")[ref_col] for df in dfs
-            ])
-            scale_ref_percent = float(np.median(np.abs(post_ref))) if len(post_ref) else 1.0
-        rms_pct_pre = 100.0 * rms_pre / scale_ref_percent if scale_ref_percent else np.nan
-        rms_pct_post = 100.0 * rms_post / scale_ref_percent if scale_ref_percent else np.nan
+            post_ref = pd.concat(
+                [
+                    self._parse_edge_region(df, post, edge_type="post")[ref_col]
+                    for df in dfs
+                ]
+            )
+            scale_ref_percent = (
+                float(np.median(np.abs(post_ref))) if len(post_ref) else 1.0
+            )
+        rms_pct_pre = (
+            100.0 * rms_pre / scale_ref_percent if scale_ref_percent else np.nan
+        )
+        rms_pct_post = (
+            100.0 * rms_post / scale_ref_percent if scale_ref_percent else np.nan
+        )
         return {
             "rms_pre": rms_pre,
             "rms_post": rms_post,
@@ -610,13 +703,28 @@ class NexafsDirectory:
             "scale_ref": scale_ref_percent,
         }
 
-    def _resolve_edge_region(self, edge_val, default_upper: float | None, default_lower: float | None, edge_type: str) -> tuple[float | None, float | None]:
+    def _resolve_edge_region(
+        self,
+        edge_val,
+        default_upper: float | None,
+        default_lower: float | None,
+        edge_type: str,
+    ) -> tuple[float | None, float | None]:
         if edge_val is None:
-            return (None, default_upper) if edge_type == "pre" else (default_lower, None)
+            return (
+                (None, default_upper) if edge_type == "pre" else (default_lower, None)
+            )
         if isinstance(edge_val, (int, float)):
-            return (None, float(edge_val)) if edge_type == "pre" else (float(edge_val), None)
+            return (
+                (None, float(edge_val))
+                if edge_type == "pre"
+                else (float(edge_val), None)
+            )
         if isinstance(edge_val, (tuple, list)) and len(edge_val) == 2:
-            return (edge_val[0] if edge_val[0] is not None else None, edge_val[1] if edge_val[1] is not None else None)
+            return (
+                edge_val[0] if edge_val[0] is not None else None,
+                edge_val[1] if edge_val[1] is not None else None,
+            )
         raise ValueError(f"{edge_type}_edge must be float or (start, stop) tuple")
 
     def fit_background_subtraction(

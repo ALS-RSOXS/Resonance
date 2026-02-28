@@ -1,7 +1,6 @@
 """Scan orchestration and execution"""
 
 import time
-from typing import List, Optional
 
 import numpy as np
 import pandas as pd
@@ -26,9 +25,9 @@ class ScanPlan:
 
     def __init__(
         self,
-        points: List[ScanPoint],
-        motor_names: List[str],
-        ai_channels: List[str],
+        points: list[ScanPoint],
+        motor_names: list[str],
+        ai_channels: list[str],
         shutter: str = "Light Output",
         instrument: Instrument = "Photodiode",
         actuate_every: bool = True,
@@ -43,7 +42,7 @@ class ScanPlan:
     def from_dataframe(
         cls,
         df: pd.DataFrame,
-        ai_channels: Optional[List[str]] = None,
+        ai_channels: list[str] | None = None,
         default_exposure: float = 1.0,
         default_delay: float = 0.2,
         shutter: str = "Light Output",
@@ -153,8 +152,10 @@ class ScanPlan:
         api_time : float
             Time per point for API processing (default 0.5 s).
         """
-        lines: List[str] = []
-        lines.append(f"Scan plan: {len(self.points)} points, {len(self.motor_names)} motors")
+        lines: list[str] = []
+        lines.append(
+            f"Scan plan: {len(self.points)} points, {len(self.motor_names)} motors"
+        )
         lines.append("")
         lines.append("Unique values:")
         for m in self.motor_names:
@@ -166,7 +167,9 @@ class ScanPlan:
         delay_val = self.points[0].delay_after_move if self.points else 0
         lines.append(f"  delay: {n_delay} ({delay_val} s)")
         lines.append("")
-        duration = self.estimated_duration_seconds(motor_time=motor_time, api_time=api_time)
+        duration = self.estimated_duration_seconds(
+            motor_time=motor_time, api_time=api_time
+        )
         minutes = duration / 60.0
         hours = duration / 3600.0
         if hours >= 1:
@@ -176,7 +179,9 @@ class ScanPlan:
         else:
             time_str = f"{duration:.1f} s"
         lines.append(f"Estimated duration: {time_str}")
-        lines.append(f"  per point: {motor_time} s (motor) + {api_time} s (api) + exposure + {delay_val} s (delay)")
+        lines.append(
+            f"  per point: {motor_time} s (motor) + {api_time} s (api) + exposure + {delay_val} s (delay)"
+        )
         print("\n".join(lines))
 
 
@@ -191,7 +196,7 @@ class ScanExecutor:
     def __init__(self, server: BCSServer):
         self.server = server
         self.abort_flag = AbortFlag()
-        self.current_scan: Optional[ScanPlan] = None
+        self.current_scan: ScanPlan | None = None
 
     async def abort(self):
         """Request abort of current scan"""
@@ -341,5 +346,3 @@ class ScanExecutor:
         # Convert to DataFrame
         df = pd.DataFrame([r.to_series() for r in results])
         return df
-
-    

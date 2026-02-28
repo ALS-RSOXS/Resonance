@@ -13,18 +13,9 @@ import pandas as pd
 from bcs import BCSz
 from uncertainties import ufloat
 
-from .types import AI, DIO, Motor
+from resonance.api.types import AI, DIO, Motor
 
 T = TypeVar("T", bound=AI | Motor | DIO)
-
-# ===========================================================================
-# Uncertainty Propagation Management
-# ===========================================================================
-
-# ==========================================================================
-# Trajectories and Global Positions
-# ==========================================================================
-
 
 @dataclass
 class TabularResponse:

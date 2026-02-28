@@ -3,7 +3,6 @@
 import asyncio
 import time
 from contextlib import asynccontextmanager
-from typing import Dict, List, Optional
 
 from bcs.BCSz import BCSServer, MotorStatus
 
@@ -44,10 +43,10 @@ class AbortFlag:
 
 async def wait_for_motors(
     server: BCSServer,
-    motors: List[str],
+    motors: list[str],
     timeout: float = 30.0,
     check_interval: float = 0.05,
-    abort_flag: Optional[AbortFlag] = None,
+    abort_flag: AbortFlag | None = None,
 ) -> None:
     """
     Wait for all motors to complete movement.
@@ -93,7 +92,7 @@ async def wait_for_motors(
         await asyncio.sleep(check_interval)
 
 
-async def wait_for_settle(delay: float, abort_flag: Optional[AbortFlag] = None) -> None:
+async def wait_for_settle(delay: float, abort_flag: AbortFlag | None = None) -> None:
     """
     Wait for motor settling with abort check.
 
@@ -130,7 +129,7 @@ async def wait_for_settle(delay: float, abort_flag: Optional[AbortFlag] = None) 
 @asynccontextmanager
 async def motor_move(
     server: BCSServer,
-    motors: Dict[str, float],
+    motors: dict[str, float],
     timeout: float = 30.0,
     backlash: bool = True,
     restore_on_exit: bool = True,

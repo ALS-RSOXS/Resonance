@@ -21,7 +21,9 @@ async def list_dio_channels() -> dict[str, Any]:
 
         result = await server.list_dios()
         if not result.get("success", False):
-            raise RuntimeError(f"Failed to list DIO channels: {result.get('error description', 'Unknown error')}")
+            raise RuntimeError(
+                f"Failed to list DIO channels: {result.get('error description', 'Unknown error')}"
+            )
 
         channels = result.get("chans", [])
         response = DIOChannelsResponse(channels=channels)

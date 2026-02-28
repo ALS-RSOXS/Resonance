@@ -413,4 +413,3 @@ def knife_edge_analysis(
     else:
         edge_idx = np.where(signal[::-1] <= threshold_value)[0][0]
     return positions[edge_idx]
-

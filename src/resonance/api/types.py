@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, List, Literal, Optional, get_args
+from typing import Literal, get_args
 
 import pandas as pd
 from uncertainties import ufloat
@@ -219,7 +219,7 @@ type Command = Literal[
     "Revert Reverse SW Limit",
 ]
 
-type Instrument = Literal["Axis Photonique"] #TODO: rename to Detector
+type Instrument = Literal["Axis Photonique"]  # TODO: rename to Detector
 
 dio = get_args(DIO.__value__)
 ai = get_args(AI.__value__)
@@ -236,9 +236,9 @@ class ScanPoint:
     """Single point in a scan trajectory"""
 
     index: int
-    motors: Dict[str, float]  # Motor names -> positions
+    motors: dict[str, float]  # Motor names -> positions
     exposure_time: float
-    ai_channels: Optional[List[str]] = None
+    ai_channels: list[str] | None = None
     delay_after_move: float = 0.2
 
     def validate(self) -> None:
@@ -257,11 +257,11 @@ class ScanResult:
     """Results from a scan point with uncertainty"""
 
     index: int
-    motors: Dict[str, float]
-    ai_data: Dict[str, ufloat]  # Channel name -> ufloat value
+    motors: dict[str, float]
+    ai_data: dict[str, ufloat]  # Channel name -> ufloat value
     exposure_time: float
     timestamp: float
-    raw_data: Dict[str, List[float]]  # For debugging
+    raw_data: dict[str, list[float]]  # For debugging
 
     def to_series(self) -> pd.Series:
         """Convert to pandas Series with proper column names"""

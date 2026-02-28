@@ -163,7 +163,7 @@ async def nexafs_scan(
     Examples
     --------
     >>> import numpy as np
-    >>> from api_dev import nexafs_scan
+    >>> from resonance.api import nexafs_scan
     >>>
     >>> # Carbon K-edge scan
     >>> energies = np.linspace(280, 320, 200)

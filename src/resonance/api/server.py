@@ -5,7 +5,6 @@ This module provides the RsoxsServer class which extends BCSz.BCSServer
 with high-level scan functionality and type-safe accessors.
 """
 
-import asyncio
 import io
 from contextlib import redirect_stdout
 
@@ -16,7 +15,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .accessors import RsoxsAccessor
 from .scan import ScanExecutor, ScanPlan
-from .types import AI, DIO, Motor, Instrument
+from .types import AI, DIO, Instrument, Motor
 
 
 class Connection(BaseSettings):

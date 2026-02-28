@@ -1,12 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
-name = "api-dev"
+name = "resonance"
 version = "0.1.0"
+description = "Resonance is a Python package for the ALS-RSOXS Beamline Control System."
+readme = "README.md"
+license = { text = "GNU General Public License v3.0" }
 requires-python = ">=3.13"
+authors = [
+    { name = "ALS-RSOXS", email = "tjferron@lbl.gov" },
+    { name = "Harlan Heilman", email = "hdheilman@lbl.gov" },
+]
+keywords = [
+    "Control System",
+    "Advanced Light Source",
+    "RSoXS",
+    "11.0.1.2",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Typing :: Typed",
+]
 dependencies = [
     "altair>=6.0.0",
     "asttokens==3.0.0",
     "asyncstdlib>=3.13.1",
-    "bcs",
     "colorama==0.4.6",
     "comm==0.2.3",
     "contourpy==1.3.3",
@@ -50,11 +74,9 @@ dependencies = [
     "python-dateutil==2.9.0.post0",
     "pytz==2025.2",
     "pyzmq==27.1.0",
-    "ruff==0.13.1",
     "scienceplots>=2.2.0",
     "scikit-learn==1.7.2",
     "scipy==1.16.2",
-    "setuptools>=80.9.0",
     "six==1.17.0",
     "stack-data==0.6.3",
     "threadpoolctl==3.6.0",
@@ -66,21 +88,121 @@ dependencies = [
     "wcwidth==0.2.13",
 ]
 
+[project.urls]
+Homepage = "https://github.com/ALS-RSOXS/auto-reflect"
+Documentation = "https://resonance.readthedocs.io"
+Repository = "https://github.com/ALS-RSOXS/auto-reflect"
+Issues = "https://github.com/ALS-RSOXS/auto-reflect/issues"
+Changelog = "https://github.com/ALS-RSOXS/auto-reflect/blob/main/CHANGELOG.md"
+
 [project.scripts]
-mcp-beamline = "mcp_server.__main__:main"
-
-[build-system]
-requires = ["setuptools>=80.9.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools.packages.find]
-where = ["src"]
-
-[tool.uv.sources]
-# bcs = { git = "https://github.com/ALS-RSOXS/bcs-install" }
-bcs = { path = "C:/bcs-install"}
+mcp-beamline = "resonance.mcp.__main__:main"
 
 [dependency-groups]
 dev = [
     "pytest>=9.0.0",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.14.14",
+    "ty>=0.0.14",
+    "hatch>=1.16.3",
+    "prek>=0.1.0",
+    "pysentry-rs>=0.1.0",
 ]
+bcs = [
+    "bcs"
+]
+
+[tool.uv.sources]
+bcs = { git = "https://github.com/ALS-RSOXS/bcs-install" }
+
+[tool.hatch.build.targets.sdist]
+include = ["/src"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/resonance"]
+
+[tool.hatch.envs.test]
+
+[[tool.hatch.envs.test.matrix]]
+python = ["3.10", "3.11", "3.12", "3.13"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+src = ["src", "tests"]
+exclude = ["notebooks"]
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "W",
+    "F",
+    "I",
+    "B",
+    "C4",
+    "UP",
+    "ARG",
+    "SIM",
+    "TCH",
+    "PTH",
+    "ERA",
+    "RUF",
+]
+extend-ignore = [
+    "E501",
+    "ARG001",
+    "ARG002",
+    "ARG003",
+    "B007",
+    "B905",
+    "PTH123",
+    "RUF022",
+    "RUF059",
+    "SIM102",
+    "SIM108",
+    "SIM118",
+    "TC001",
+    "UP046",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["resonance"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["ARG001"]
+
+[tool.ty.src]
+include = ["**/*.py"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = [
+    "-ra",
+    "-q",
+    "--strict-markers",
+    "--strict-config",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+
+[tool.coverage.run]
+source = ["src/resonance"]
+branch = true
+parallel = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+show_missing = true
+
+[tool.git-cliff]
+config = "cliff.toml"

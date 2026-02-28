@@ -4,9 +4,9 @@ import asyncio
 from typing import Optional
 
 try:
-    from api_dev.server import RsoxsServer
+    from resonance.api.server import RsoxsServer
 except ImportError:
-    from ..api_dev.server import RsoxsServer
+    from ..api.server import RsoxsServer
 
 
 class ConnectionManager:
@@ -14,7 +14,7 @@ class ConnectionManager:
 
     _instance: Optional["ConnectionManager"] = None
     _lock = asyncio.Lock()
-    _server: Optional[RsoxsServer] = None
+    _server: RsoxsServer | None = None
     _connected: bool = False
 
     def __new__(cls):
@@ -61,11 +61,15 @@ class ConnectionManager:
                 except ConnectionError as e:
                     self._connected = False
                     self._server = None
-                    raise ConnectionError(f"Failed to connect to beamline server: {e}") from e
+                    raise ConnectionError(
+                        f"Failed to connect to beamline server: {e}"
+                    ) from e
                 except Exception as e:
                     self._connected = False
                     self._server = None
-                    raise RuntimeError(f"Unexpected error connecting to beamline server: {e}") from e
+                    raise RuntimeError(
+                        f"Unexpected error connecting to beamline server: {e}"
+                    ) from e
 
     async def disconnect(self) -> None:
         """Disconnect from server."""

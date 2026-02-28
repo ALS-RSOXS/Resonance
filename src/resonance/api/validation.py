@@ -1,7 +1,6 @@
 """DataFrame validation utilities for scan plan creation"""
 
 import re
-from typing import List, Optional
 
 import pandas as pd
 
@@ -22,7 +21,7 @@ EXPOSURE_PATTERNS = [
 ]
 
 
-def find_exposure_column(df: pd.DataFrame) -> Optional[str]:
+def find_exposure_column(df: pd.DataFrame) -> str | None:
     """
     Find exposure time column using pattern matching.
 
@@ -51,7 +50,7 @@ def find_exposure_column(df: pd.DataFrame) -> Optional[str]:
 # ============================================================================
 
 
-def validate_motor_columns(df: pd.DataFrame) -> List[str]:
+def validate_motor_columns(df: pd.DataFrame) -> list[str]:
     """
     Validate that DataFrame columns match known motor names.
 
@@ -99,7 +98,7 @@ def validate_motor_columns(df: pd.DataFrame) -> List[str]:
 # ============================================================================
 
 
-def validate_scan_dataframe(df: pd.DataFrame) -> tuple[List[str], Optional[str]]:
+def validate_scan_dataframe(df: pd.DataFrame) -> tuple[list[str], str | None]:
     """
     Validate complete scan DataFrame.
 

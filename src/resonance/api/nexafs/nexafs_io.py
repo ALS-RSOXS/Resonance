@@ -128,7 +128,15 @@ class NexafsAccessor:
                 sub = df[df["Angle"] == angle]
                 color = sm.to_rgba(angle)
                 ax.plot(sub["Energy"], sub[ycol], label=f"{angle:.1f} deg", color=color)
-            ax.legend(title="Angle", handlelength=0.5, fontsize=10, ncol=2, frameon=True, fancybox=False, framealpha=1)
+            ax.legend(
+                title="Angle",
+                handlelength=0.5,
+                fontsize=10,
+                ncol=2,
+                frameon=True,
+                fancybox=False,
+                framealpha=1,
+            )
             plt.colorbar(sm, ax=ax, pad=0.02).set_label("Angle (deg)")
         else:
             if show_bare_atom and "Bare Atom Step" in df.columns:
