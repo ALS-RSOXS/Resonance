@@ -18,9 +18,14 @@ from .accessors import (
     TabularResponse,
 )
 
-# Core async primitives
+# Core async primitives and typed accessors
 from .core import (
     AbortFlag,
+    AIAccessor,
+    Beamline,
+    DIOAccessor,
+    MotorAccessor,
+    MotorState,
     motor_move,
     shutter_control,
     wait_for_motors,
@@ -108,12 +113,17 @@ __all__ = [
     "find_exposure_column",
     "validate_motor_columns",
     "validate_scan_dataframe",
-    # Core primitives
+    # Core primitives and accessors
     "AbortFlag",
     "wait_for_motors",
     "wait_for_settle",
     "motor_move",
     "shutter_control",
+    "AIAccessor",
+    "Beamline",
+    "DIOAccessor",
+    "MotorAccessor",
+    "MotorState",
     # Scan
     "ScanPlan",
     "ScanExecutor",
