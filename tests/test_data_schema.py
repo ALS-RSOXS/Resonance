@@ -70,10 +70,9 @@ def test_migrate_beamtime_schema_downgrade_raises() -> None:
 
 def test_migrate_beamtime_schema_upgrade_raises_not_implemented() -> None:
     conn = sqlite3.connect(":memory:")
-    conn.execute("PRAGMA user_version = 0")
-    conn.commit()
+    create_beamtime_schema(conn)
     with pytest.raises(NotImplementedError):
-        migrate_beamtime_schema(conn, target_version=1)
+        migrate_beamtime_schema(conn, target_version=3)
     conn.close()
 
 
