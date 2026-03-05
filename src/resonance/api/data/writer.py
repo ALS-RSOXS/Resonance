@@ -3,14 +3,12 @@ from __future__ import annotations
 import json
 import sqlite3
 import time
-from typing import TYPE_CHECKING, Any
+from pathlib import Path  # noqa: TC003
+from typing import Any
 from uuid import uuid4
 
 from resonance.api.data.models import SampleMetadata
 from resonance.api.data.schema import create_beamtime_schema
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class RunWriter:
