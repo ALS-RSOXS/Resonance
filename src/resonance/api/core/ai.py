@@ -25,6 +25,12 @@ class AIAccessor:
     -----
     Wraps `acquire_data` and `get_acquired_array` for typed, validated
     access to AI channels defined in `resonance.api.types.AI`.
+
+    Examples
+    --------
+    >>> data = await bl.ai.read("Photodiode", "TEY signal", "AI 3 Izero")
+    >>> print(data)
+    {'Photodiode': [0.0], 'TEY signal': [0.0], 'AI 3 Izero': [0.0]}
     """
 
     def __init__(self, conn: BCSz.BCSServer) -> None:

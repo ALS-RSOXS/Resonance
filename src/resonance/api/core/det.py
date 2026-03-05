@@ -69,7 +69,19 @@ class AreaDetector:
     conn : BCSz.BCSServer
         Active BCSz server connection.
     name : str, optional
-        Instrument name registered in BCSz, defaults to ``DETECTOR_NAME``.
+        Instrument name registered in BCSz, defaults to ``Axis Photonique``.
+    
+    Examples
+    --------
+    >>> image = await bl.detector.acquire(exposure_seconds=0.1)
+    >>> print(image.shape)
+    (1024, 1024)
+    >>> quality = bl.detector.check_exposure(image)
+    >>> print(quality)
+    ExposureQuality(overexposed=False, underexposed=False, suggested_exposure_seconds=None)
+    >>> descriptor = bl.detector.describe()
+    >>> print(descriptor)
+    {'dtype': 'int32', 'source': 'detector', 'external': True, 'shape': [1024, 1024]}
     """
 
     def __init__(self, conn: BCSz.BCSServer, *, name: str = AXIS_PHOTONIQUE) -> None:

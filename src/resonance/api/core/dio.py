@@ -26,6 +26,17 @@ class DIOAccessor:
     Wraps BCSz digital I/O channels. `read` reads digital inputs; `set` writes
     digital outputs. The shutter channel ("Light Output", "Shutter Output", etc.)
     is the most common use case. Values are always coerced to bool.
+
+    Examples
+    --------
+    >>> state = await bl.dio.read("Shutter Output", "Light Output")
+    >>> print(state)
+    {'Shutter Output': True, 'Light Output': True}
+    >>> await bl.dio.set("Shutter Output", False)
+    >>> await bl.dio.set("Light Output", True)
+    >>> state = await bl.dio.read("Shutter Output", "Light Output")
+    >>> print(state)
+    {'Shutter Output': False, 'Light Output': True}
     """
 
     def __init__(self, conn: BCSz.BCSServer) -> None:
