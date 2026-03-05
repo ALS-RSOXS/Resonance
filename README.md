@@ -1,6 +1,6 @@
 # Resonance
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ALS-RSOXS/auto-reflect)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ALS-RSOXS/Resonance)
 
 Resonance is a Python package for the ALS-RSOXS Beamline Control System. It provides a high-level API for motor control, analog inputs, NEXAFS scans, and an MCP server for beamline access.
 
