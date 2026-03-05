@@ -2,16 +2,12 @@
 
 import asyncio
 import time
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from bcs.BCSz import BCSServer, MotorStatus
 
 from resonance.api.types import MotorError, MotorTimeoutError, ScanAbortedError
-
-
-# ============================================================================
-# Abort Mechanism
-# ============================================================================
 
 
 class AbortFlag:
@@ -37,11 +33,6 @@ class AbortFlag:
             self._aborted = False
 
 
-# ============================================================================
-# Wait Utilities
-# ============================================================================
-
-
 async def wait_for_motors(
     server: BCSServer,
     motors: list[str],
@@ -52,16 +43,25 @@ async def wait_for_motors(
     """
     Wait for all motors to complete movement.
 
-    Parameters:
-        server: BCS server instance
-        motors: List of motor names to wait for
-        timeout: Maximum time to wait in seconds
-        check_interval: Time between status checks
-        abort_flag: Optional abort flag to check
+    Parameters
+    ----------
+    server : BCSServer
+        BCS server instance
+    motors : list[str]
+        Motor names to wait for
+    timeout : float
+        Maximum time to wait in seconds
+    check_interval : float
+        Time between status checks
+    abort_flag : AbortFlag or None
+        Optional abort flag to check
 
-    Raises:
-        MotorTimeoutError: If timeout exceeded
-        ScanAbortedError: If abort_flag is set
+    Raises
+    ------
+    MotorTimeoutError
+        If timeout exceeded
+    ScanAbortedError
+        If abort_flag is set
     """
     start_time = time.time()
 
@@ -94,12 +94,17 @@ async def wait_for_settle(delay: float, abort_flag: AbortFlag | None = None) -> 
     """
     Wait for motor settling with abort check.
 
-    Parameters:
-        delay: Time to wait in seconds
-        abort_flag: Optional abort flag to check
+    Parameters
+    ----------
+    delay : float
+        Time to wait in seconds
+    abort_flag : AbortFlag or None
+        Optional abort flag to check
 
-    Raises:
-        ScanAbortedError: If abort_flag is set during wait
+    Raises
+    ------
+    ScanAbortedError
+        If abort_flag is set during wait
     """
     if delay <= 0:
         return
@@ -117,11 +122,6 @@ async def wait_for_settle(delay: float, abort_flag: AbortFlag | None = None) -> 
         await asyncio.sleep(remainder)
 
 
-# ============================================================================
-# Context Managers
-# ============================================================================
-
-
 @asynccontextmanager
 async def motor_move(
     server: BCSServer,
@@ -129,34 +129,43 @@ async def motor_move(
     timeout: float = 30.0,
     backlash: bool = True,
     restore_on_exit: bool = True,
-):
+) -> AsyncGenerator[dict[str, float]]:
     """
     Context manager for safe motor movements with automatic position restoration.
 
-    Parameters:
-        server: BCS server instance
-        motors: Dictionary of motor_name -> target_position
-        timeout: Timeout for motor moves
-        backlash: Use backlash compensation
-        restore_on_exit: Restore initial positions on exit
+    Parameters
+    ----------
+    server : BCSServer
+        BCS server instance
+    motors : dict[str, float]
+        Motor name to target position mapping
+    timeout : float
+        Timeout for motor moves
+    backlash : bool
+        Use backlash compensation
+    restore_on_exit : bool
+        Restore initial positions on exit
 
-    Yields:
-        Dictionary of initial motor positions
+    Yields
+    ------
+    dict[str, float]
+        Initial motor positions
 
-    Raises:
-        MotorError: If motor move fails
+    Raises
+    ------
+    MotorError
+        If motor move fails
 
-    Example:
-        async with motor_move(server, {"Sample X": 10.0}) as initial_pos:
-            # Do work at new position
-            pass
-        # Motors automatically return to initial_pos
+    Examples
+    --------
+    >>> async with motor_move(server, {"Sample X": 10.0}) as initial_pos:
+    ...     pass
     """
+    command = "Backlash Move" if backlash else "Normal Move"
     initial_response = await server.get_motor(motors=list(motors.keys()))
     initial_pos = {m["motor"]: m["position"] for m in initial_response["data"]}
 
     try:
-        command = "Backlash Move"
         await server.command_motor(
             commands=[command] * len(motors),
             motors=list(motors.keys()),
@@ -173,8 +182,9 @@ async def motor_move(
     finally:
         if restore_on_exit:
             try:
+                restore_command = "Backlash Move" if backlash else "Normal Move"
                 await server.command_motor(
-                    commands=["Backlash Move"] * len(initial_pos),
+                    commands=[restore_command] * len(initial_pos),
                     motors=list(initial_pos.keys()),
                     goals=list(initial_pos.values()),
                 )
@@ -186,21 +196,24 @@ async def motor_move(
 @asynccontextmanager
 async def shutter_control(
     server: BCSServer, shutter: str = "Light Output", delay_before_open: float = 0.0
-):
+) -> AsyncGenerator[None]:
     """
     Context manager for safe shutter control.
     Guarantees shutter closes even on exception.
 
-    Parameters:
-        server: BCS server instance
-        shutter: Shutter DIO channel name
-        delay_before_open: Delay before opening shutter
+    Parameters
+    ----------
+    server : BCSServer
+        BCS server instance
+    shutter : str
+        Shutter DIO channel name
+    delay_before_open : float
+        Delay before opening shutter
 
-    Example:
-        async with shutter_control(server):
-            # Shutter is open, collect data
-            await server.acquire_data(time=1.0)
-        # Shutter automatically closes
+    Examples
+    --------
+    >>> async with shutter_control(server):
+    ...     await server.acquire_data(time=1.0)
     """
     try:
         if delay_before_open > 0:

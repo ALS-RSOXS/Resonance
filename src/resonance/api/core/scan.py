@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -20,8 +20,9 @@ from resonance.api.types import ScanAbortedError, ScanPoint, ScanResult
 from resonance.api.validation import validate_scan_dataframe
 
 if TYPE_CHECKING:
-    from bcs import BCSz
+    from collections.abc import Iterator
 
+    from bcs import BCSz
 
 class ScanPlan:
     """
@@ -152,8 +153,9 @@ class ScanPlan:
 
         Notes
         -----
-        # TODO: account for shutter actuation time when actuate_every=True
+        Does not account for shutter actuation overhead when ``actuate_every=True``.
         """
+        # TODO: account for shutter actuation time when actuate_every=True
         return sum(
             motor_time + api_time + p.exposure_time + p.delay_after_move
             for p in self.points
@@ -190,7 +192,9 @@ class ScanPlan:
             f"  delay: {len({p.delay_after_move for p in self.points})} ({delay_val} s)"
         )
         lines.append("")
-        duration = self.estimated_duration_seconds(motor_time=motor_time, api_time=api_time)
+        duration = self.estimated_duration_seconds(
+            motor_time=motor_time, api_time=api_time
+        )
         minutes, hours = duration / 60.0, duration / 3600.0
         if hours >= 1:
             time_str = f"{hours:.1f} h ({duration:.0f} s)"
@@ -208,7 +212,7 @@ class ScanPlan:
     def __len__(self) -> int:
         return len(self.points)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[ScanPoint]:
         return iter(self.points)
 
 
@@ -218,14 +222,18 @@ class ScanExecutor:
 
     Supports two interrupt modes:
 
-    1. Programmatic abort: call ``await executor.abort()`` from any coroutine.
-       The `AbortFlag` is set; the next check inside `execute_point` or
-       `wait_for_settle` raises `ScanAbortedError`.
+    1. Programmatic abort: call ``await executor.abort()`` from any async
+       context to set the abort flag.  The next check inside `execute_point`
+       or `wait_for_settle` raises `ScanAbortedError`.
 
-    2. Jupyter / IPython interrupt (Ctrl-C): the event loop propagates an
-       `asyncio.CancelledError` into the running coroutine.  `execute_scan`
-       catches this, sets the abort flag, and returns any partial results
-       already collected.
+    2. Jupyter / IPython interrupt: create the scan as an ``asyncio.Task``
+       and call ``await bl.abort_scan()`` from another cell to set the abort
+       flag and stop after the current point.
+
+    ``asyncio.CancelledError`` is raised when the Task is cancelled via
+    ``task.cancel()``.  ``execute_scan`` catches this, sets the abort flag,
+    and returns any partial results already collected.  If no results have
+    been collected the error is re-raised.
 
     Parameters
     ----------
@@ -240,7 +248,14 @@ class ScanExecutor:
 
     @property
     def current_scan(self) -> ScanPlan | None:
-        """Currently running `ScanPlan`, or None when idle."""
+        """
+        Currently running scan plan.
+
+        Returns
+        -------
+        ScanPlan or None
+            The active `ScanPlan` during execution, or ``None`` when idle.
+        """
         return self._current_scan
 
     async def abort(self) -> None:
@@ -309,14 +324,16 @@ class ScanExecutor:
                 self._current_scan.ai_channels if self._current_scan else []
             )
 
-            async def _acquire() -> dict:
+            async def _acquire() -> dict[str, Any]:
                 if await self._abort_flag.is_set():
                     raise ScanAbortedError("Scan aborted before acquisition")
                 await self._conn.acquire_data(chans=channels, time=point.exposure_time)
                 return await self._conn.get_acquired_array(chans=channels)
 
             if use_shutter:
-                shutter_name = self._current_scan.shutter if self._current_scan else "Light Output"
+                shutter_name = (
+                    self._current_scan.shutter if self._current_scan else "Light Output"
+                )
                 async with shutter_control(self._conn, shutter=shutter_name):
                     result = await _acquire()
             else:
@@ -361,13 +378,17 @@ class ScanExecutor:
 
         Interrupt modes
         ---------------
-        Programmatic: call ``await executor.abort()``.  The `AbortFlag` is
-        checked at the start of each point; `ScanAbortedError` is raised and
-        partial results are returned.
+        Programmatic: call ``await executor.abort()`` from any async context.
+        The `AbortFlag` is checked at the start of each point;
+        `ScanAbortedError` is raised and partial results are returned.
 
-        Jupyter / IPython Ctrl-C: an `asyncio.CancelledError` is caught, the
-        abort flag is set, and partial results collected so far are returned.
-        If no results have been collected the error is re-raised.
+        Jupyter / IPython: create this coroutine as an ``asyncio.Task`` and
+        call ``await bl.abort_scan()`` from another cell to set the abort
+        flag and stop after the current point.
+
+        ``asyncio.CancelledError``: raised when the Task is cancelled via
+        ``task.cancel()``.  Partial results are returned if any points
+        completed; otherwise the error is re-raised.
 
         Parameters
         ----------
@@ -385,8 +406,10 @@ class ScanExecutor:
 
         Notes
         -----
-        # TODO: emit Bluesky-compatible start/stop documents for future Databroker integration
+        Does not emit Bluesky-compatible start/stop documents; Databroker
+        integration is not yet implemented.
         """
+        # TODO: emit Bluesky-compatible start/stop documents for future Databroker integration
         self._current_scan = scan_plan
         await self._abort_flag.clear()
 
@@ -429,9 +452,13 @@ class ScanExecutor:
 
         except asyncio.CancelledError:
             await self._abort_flag.set()
-            print(f"\nScan interrupted after {len(results)}/{len(scan_plan.points)} points")
+            print(
+                f"\nScan interrupted after {len(results)}/{len(scan_plan.points)} points"
+            )
             if not results:
                 raise
+            # Intentionally not re-raising: returns partial results to the caller.
+            # Task cancellation propagation is sacrificed for interactive usability.
 
         finally:
             self._current_scan = None

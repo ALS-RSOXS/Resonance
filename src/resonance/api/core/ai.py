@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, get_args
 
 import numpy as np
-from uncertainties import ufloat
+from uncertainties import Variable, ufloat
 
 from resonance.api.types import AI, AcquisitionError
 
@@ -77,7 +77,7 @@ class AIAccessor:
         self,
         channels: list[str],
         acquisition_time: float = 1.0,
-    ) -> dict[str, ufloat]:
+    ) -> dict[str, Variable]:
         """Trigger acquisition and return mean and standard error per channel.
 
         Parameters
@@ -89,7 +89,7 @@ class AIAccessor:
 
         Returns
         -------
-        dict[str, ufloat]
+        dict[str, Variable]
             Mapping of channel name to `ufloat(mean, std_err)`.
 
         Raises
@@ -122,11 +122,11 @@ class AIAccessor:
                 f"acquisition_time must be positive, got {acquisition_time}"
             )
 
-        await self._conn.acquire_data(chans=channels, time=acquisition_time)
+        await self._conn.acquire_data(chans=channels, time=acquisition_time)  # pyright: ignore[reportArgumentType]
         response: dict = await self._conn.get_acquired_array(chans=channels)
 
         # TODO: add optional return of raw arrays for debugging or downstream processing
-        result: dict[str, ufloat] = {}
+        result: dict[str, Variable] = {}
         for entry in response["chans"]:
             name: str = entry["chan"]
             data: list[float] = entry["data"]

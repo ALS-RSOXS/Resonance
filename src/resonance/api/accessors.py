@@ -17,6 +17,7 @@ from resonance.api.types import AI, DIO, Motor
 
 T = TypeVar("T", bound=AI | Motor | DIO)
 
+
 @dataclass
 class TabularResponse:
     """Container for tabular data with state and status DataFrames."""

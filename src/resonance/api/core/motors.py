@@ -198,9 +198,9 @@ class MotorAccessor:
         --------
         >>> await accessor.set_many({"Sample X": 5.0, "Sample Y": -2.5})
         """
-        self._validate_motors(list(targets.keys()))
-        self._validate_command(command)
         names = list(targets.keys())
+        self._validate_motors(names)
+        self._validate_command(command)
         await self._conn.command_motor(
             commands=[command] * len(names),
             motors=names,

@@ -27,13 +27,6 @@ from .core import (
     wait_for_settle,
 )
 
-# NEXAFS functionality
-from .nexafs import (
-    calculate_nexafs,
-    nexafs_scan,
-    normalize_to_edge_jump,
-)
-
 # Scan orchestration
 from .scan import (
     ScanExecutor,
@@ -128,10 +121,6 @@ __all__ = [
     "RsoxsAccessor",
     "RsoxsServer",
     "Connection",
-    # NEXAFS
-    "calculate_nexafs",
-    "nexafs_scan",
-    "normalize_to_edge_jump",
     # Utilities
     "create_grid_scan",
     "create_line_scan",

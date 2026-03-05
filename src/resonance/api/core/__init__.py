@@ -1,9 +1,4 @@
-"""
-Core components for the beamline API.
-
-Contains the core components for the beamline API, including
-the accessors for the beamline components, and the scan executor.
-"""
+"""Low-level async primitives, typed accessors, and scan orchestration for the beamline API (BCSz-based, composition-only)."""
 
 from .primitives import (
     AbortFlag,
