@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS streams (
 );
 
 CREATE INDEX IF NOT EXISTS idx_streams_run ON streams(run_uid);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_streams_run_name ON streams(run_uid, name);
 
 CREATE TABLE IF NOT EXISTS events (
     uid        TEXT PRIMARY KEY,
@@ -58,7 +59,7 @@ CREATE TABLE IF NOT EXISTS events (
 );
 
 CREATE INDEX IF NOT EXISTS idx_events_stream ON events(stream_uid);
-CREATE INDEX IF NOT EXISTS idx_events_seq    ON events(stream_uid, seq_num);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_events_seq ON events(stream_uid, seq_num);
 
 CREATE TABLE IF NOT EXISTS image_refs (
     -- TODO: add compression_codec column when detector integration is added
@@ -139,3 +140,7 @@ def migrate_beamtime_schema(
             f"Database schema version {current_version} is newer than "
             f"target version {target_version}. Downgrade is not supported."
         )
+    raise NotImplementedError(
+        f"No migration path from schema version {current_version} to {target_version}. "
+        "Schema migrations have not yet been implemented."
+    )
