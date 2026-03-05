@@ -30,7 +30,7 @@ def test_parse_acquired2d_string_shape() -> None:
 def test_acquire_success() -> None:
     conn = MagicMock()
     conn.start_instrument_acquire = AsyncMock(return_value={"success": True})
-    conn.get_instrument_acquired2d_string = AsyncMock(
+    conn.bcs_request = AsyncMock(
         return_value={"Height": 2, "Width": 2, "Data": "10,20,30,40"}
     )
     det = AreaDetector(conn)
@@ -86,7 +86,7 @@ def test_describe_before_acquire() -> None:
 def test_describe_after_acquire() -> None:
     conn = MagicMock()
     conn.start_instrument_acquire = AsyncMock(return_value={"success": True})
-    conn.get_instrument_acquired2d_string = AsyncMock(
+    conn.bcs_request = AsyncMock(
         return_value={"Height": 2, "Width": 2, "Data": "10,20,30,40"}
     )
     det = AreaDetector(conn)
@@ -99,7 +99,9 @@ def test_detector_name_constant() -> None:
 
 
 def test_exposure_quality_dataclass_fields() -> None:
-    q = ExposureQuality(overexposed=True, underexposed=False, suggested_exposure_seconds=0.5)
+    q = ExposureQuality(
+        overexposed=True, underexposed=False, suggested_exposure_seconds=0.5
+    )
     assert q.overexposed is True
     assert q.underexposed is False
     assert q.suggested_exposure_seconds == 0.5

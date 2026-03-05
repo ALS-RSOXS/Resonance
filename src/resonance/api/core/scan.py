@@ -387,7 +387,7 @@ class ScanExecutor:
             async def _acquire() -> dict[str, Any]:
                 if await self._abort_flag.is_set():
                     raise ScanAbortedError("Scan aborted before acquisition")
-                await self._conn.acquire_data(chans=channels, time=point.exposure_time)   # pyright: ignore[reportArgumentType]
+                await self._conn.acquire_data(chans=channels, time=point.exposure_time)  # pyright: ignore[reportArgumentType]
                 return await self._conn.get_acquired_array(chans=channels)
 
             if use_shutter:
@@ -488,14 +488,26 @@ class ScanExecutor:
         if writer is not None:
             data_keys: dict[str, dict[str, str]] = {
                 **{
-                    f"{normalize_header(m)}_position": {"dtype": "number", "units": "mm", "source": "motor"}
+                    f"{normalize_header(m)}_position": {
+                        "dtype": "number",
+                        "units": "mm",
+                        "source": "motor",
+                    }
                     for m in scan_plan.motor_names
                 },
                 **{
-                    normalize_header(ch): {"dtype": "number", "units": "V", "source": "ai"}
+                    normalize_header(ch): {
+                        "dtype": "number",
+                        "units": "V",
+                        "source": "ai",
+                    }
                     for ch in scan_plan.ai_channels
                 },
-                normalize_header("exposure"): {"dtype": "number", "units": "s", "source": "plan"},
+                normalize_header("exposure"): {
+                    "dtype": "number",
+                    "units": "s",
+                    "source": "plan",
+                },
             }
             if detector is not None:
                 data_keys["detector_image"] = detector.describe()
@@ -526,13 +538,25 @@ class ScanExecutor:
                 results.append(result)
                 if writer is not None:
                     event_data: dict[str, float | int | str | bool] = {
-                        **{f"{normalize_header(m)}_position": v for m, v in result.motors.items()},
-                        **{normalize_header(ch): result.ai_data[ch].nominal_value for ch in result.ai_data},
+                        **{
+                            f"{normalize_header(m)}_position": v
+                            for m, v in result.motors.items()
+                        },
+                        **{
+                            normalize_header(ch): result.ai_data[ch].nominal_value
+                            for ch in result.ai_data
+                        },
                         normalize_header("exposure"): result.exposure_time,
                     }
                     timestamps: dict[str, float] = {
-                        **{f"{normalize_header(m)}_position": result.timestamp for m in result.motors},
-                        **{normalize_header(ch): result.timestamp for ch in result.ai_data},
+                        **{
+                            f"{normalize_header(m)}_position": result.timestamp
+                            for m in result.motors
+                        },
+                        **{
+                            normalize_header(ch): result.timestamp
+                            for ch in result.ai_data
+                        },
                         normalize_header("exposure"): result.timestamp,
                     }
                     event_uid = writer.write_event(event_data, timestamps)

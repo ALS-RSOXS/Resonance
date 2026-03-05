@@ -4,14 +4,17 @@ import json
 import sqlite3
 import time
 from pathlib import Path  # noqa: TC003
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
 
-import numpy as np
 import zarr
+
+if TYPE_CHECKING:
+    import numpy as np
 
 from resonance.api.data.models import SampleMetadata
 from resonance.api.data.schema import create_beamtime_schema
+
 
 class RunWriter:
     """Manages a SQLite connection to a beamtime database and writes scan data.
@@ -98,7 +101,9 @@ class RunWriter:
         zarr_path = self._db_path.with_suffix(".zarr")
         self._zarr_store = zarr.open_group(str(zarr_path), mode="a")
 
-    def open_run(self, plan_name: str, *, metadata: dict[str, Any] | None = None) -> str:
+    def open_run(
+        self, plan_name: str, *, metadata: dict[str, Any] | None = None
+    ) -> str:
         """Insert a new run row and return its UID.
 
         Parameters
@@ -254,12 +259,12 @@ class RunWriter:
             raise RuntimeError("No open run")
         if not self._stream_uid:
             raise RuntimeError("No open stream")
-        store = cast(zarr.Group, self._zarr_store)
+        store = cast("zarr.Group", self._zarr_store)
 
         zarr_group: str = f"runs/{self._run_uid}/{field_name}"
 
         if zarr_group in store:
-            arr = cast(zarr.Array, store[zarr_group])
+            arr = cast("zarr.Array", store[zarr_group])
         else:
             arr = store.require_array(
                 zarr_group,

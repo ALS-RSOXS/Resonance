@@ -105,7 +105,9 @@ def create_beamtime_schema(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
-def migrate_beamtime_schema(conn: sqlite3.Connection, target_version: int = BEAMTIME_SCHEMA_VERSION) -> None:
+def migrate_beamtime_schema(
+    conn: sqlite3.Connection, target_version: int = BEAMTIME_SCHEMA_VERSION
+) -> None:
     """Apply pending schema migrations up to target_version.
 
     Parameters

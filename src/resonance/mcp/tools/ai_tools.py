@@ -48,8 +48,7 @@ async def get_ai_values(channels: list[str] | None = None) -> dict[str, Any]:
         target = channels if channels else list(ai)
         result = await beamline.ai.read(*target)
         values = {
-            chan: float(vals[-1]) if vals else 0.0
-            for chan, vals in result.items()
+            chan: float(vals[-1]) if vals else 0.0 for chan, vals in result.items()
         }
         return AIValuesResponse(values=values).model_dump()
 

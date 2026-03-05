@@ -75,8 +75,7 @@ class DIOAccessor:
 
         response: dict = await self._conn.get_di(chans=list(channels))
         return {
-            chan: bool(data)
-            for chan, data in zip(response["chans"], response["data"])
+            chan: bool(data) for chan, data in zip(response["chans"], response["data"])
         }
 
     async def set(self, channel: str, value: bool | int) -> None:
@@ -114,9 +113,7 @@ class DIOAccessor:
             )
 
         if not isinstance(value, bool | int):
-            raise ValueError(
-                f"value must be bool or int, got {type(value).__name__!r}"
-            )
+            raise ValueError(f"value must be bool or int, got {type(value).__name__!r}")
 
         bool_value = bool(value)
 

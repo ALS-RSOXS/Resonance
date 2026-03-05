@@ -171,7 +171,7 @@ class AreaDetector:
         self,
         image: np.ndarray,
         *,
-        over_threshold: int = int(2e16),
+        over_threshold: int = int(2e5),
         over_pixel_count: int = 500,
         under_threshold: int = 50,
         under_pixel_count: int = 950_000,

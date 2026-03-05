@@ -183,7 +183,9 @@ class Run:
         Path to the Zarr store for detector images.
     """
 
-    def __init__(self, conn: sqlite3.Connection, row: dict[str, Any], zarr_path: Path) -> None:
+    def __init__(
+        self, conn: sqlite3.Connection, row: dict[str, Any], zarr_path: Path
+    ) -> None:
         self._conn = conn
         self._row = row
         self._zarr_path = zarr_path
@@ -325,7 +327,12 @@ class LazyImageSequence:
         Path to the Zarr store directory.
     """
 
-    def __init__(self, conn: sqlite3.Connection, refs: list[dict[str, Any]], zarr_store_path: Path) -> None:
+    def __init__(
+        self,
+        conn: sqlite3.Connection,
+        refs: list[dict[str, Any]],
+        zarr_store_path: Path,
+    ) -> None:
         self._conn = conn
         self._refs = refs
         self._zarr_store_path = zarr_store_path
@@ -363,12 +370,18 @@ class LazyImageSequence:
         """
         if isinstance(idx, int):
             if idx < -len(self._refs) or idx >= len(self._refs):
-                raise IndexError(f"index {idx} out of range for LazyImageSequence of length {len(self._refs)}")
+                raise IndexError(
+                    f"index {idx} out of range for LazyImageSequence of length {len(self._refs)}"
+                )
             ref = self._refs[idx] if idx >= 0 else self._refs[len(self._refs) + idx]
             store = zarr.open_group(str(self._zarr_store_path), mode="r")
             arr = store[ref["zarr_group"]]
             return np.asarray(arr[ref["index_in_stack"]])
         if isinstance(idx, slice):
             indices = range(*idx.indices(len(self._refs)))
-            return np.stack([self[i] for i in indices]) if indices else np.empty((0,), dtype=np.int32)
+            return (
+                np.stack([self[i] for i in indices])
+                if indices
+                else np.empty((0,), dtype=np.int32)
+            )
         raise TypeError(f"indices must be int or slice, not {type(idx).__name__}")

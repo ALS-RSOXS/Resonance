@@ -72,7 +72,9 @@ def test_execute_scan_with_detector_writes_images(tmp_path: Path) -> None:
         patch("resonance.api.core.scan.wait_for_settle", AsyncMock()),
     ):
         asyncio.run(
-            executor.execute_scan(scan_plan, progress=False, writer=writer, detector=det)
+            executor.execute_scan(
+                scan_plan, progress=False, writer=writer, detector=det
+            )
         )
 
     writer.close()
@@ -92,7 +94,7 @@ def test_execute_scan_with_detector_writes_images(tmp_path: Path) -> None:
 
     zarr_group = rows[0][3]
     store = zarr.open_group(str(tmp_path / "bt.zarr"), mode="r")
-    arr = cast(zarr.Array, store[zarr_group])
+    arr = cast("zarr.Array", store[zarr_group])
     assert arr.shape == (2, 4, 4)
 
 
@@ -110,7 +112,9 @@ def test_execute_scan_without_detector_no_images(tmp_path: Path) -> None:
         patch("resonance.api.core.scan.wait_for_settle", AsyncMock()),
     ):
         asyncio.run(
-            executor.execute_scan(scan_plan, progress=False, writer=writer, detector=None)
+            executor.execute_scan(
+                scan_plan, progress=False, writer=writer, detector=None
+            )
         )
 
     writer.close()
