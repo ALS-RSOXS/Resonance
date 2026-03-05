@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import sqlite3
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
+import numpy as np
 import pytest
+import zarr
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -95,3 +97,64 @@ def test_run_writer_close_run_clears_uid(tmp_path: Path) -> None:
     with pytest.raises(RuntimeError):
         w.write_event({})
     w.close()
+
+
+def test_write_image_creates_zarr_and_image_refs(tmp_path: Path) -> None:
+    db = tmp_path / "bt.db"
+    image = np.ones((4, 4), dtype=np.int32)
+    with RunWriter(db, SampleMetadata(name="PS")) as w:
+        w.open_run("scan")
+        w.open_stream("primary", {})
+        event_uid = w.write_event({"Energy": 285.0})
+        w.write_image(event_uid, "detector_image", image)
+
+    db_conn = sqlite3.connect(db)
+    row = db_conn.execute(
+        "SELECT shape_x, shape_y, dtype, compression_codec, zarr_group FROM image_refs"
+    ).fetchone()
+    db_conn.close()
+
+    assert row is not None
+    shape_x, shape_y, dtype, codec, zarr_group = row
+    assert shape_x == 4
+    assert shape_y == 4
+    assert dtype == "int32"
+    assert codec == "blosc"
+
+    store = zarr.open_group(str(tmp_path / "bt.zarr"), mode="r")
+    arr = cast("zarr.Array", store[zarr_group])
+    assert arr.shape == (1, 4, 4)
+
+
+def test_write_image_raises_without_open_stream(tmp_path: Path) -> None:
+    db = tmp_path / "bt.db"
+    w = RunWriter(db, SampleMetadata(name="PS"))
+    w.open()
+    w.open_run("scan")
+    with pytest.raises(RuntimeError):
+        w.write_image("x", "field", np.ones((4, 4), dtype=np.int32))
+    w.close_run()
+    w.close()
+
+
+def test_write_image_multiple_frames(tmp_path: Path) -> None:
+    db = tmp_path / "bt.db"
+    with RunWriter(db, SampleMetadata(name="PS")) as w:
+        w.open_run("scan")
+        w.open_stream("primary", {})
+        for i in range(3):
+            event_uid = w.write_event({"i": float(i)})
+            w.write_image(event_uid, "detector_image", np.ones((4, 4), dtype=np.int32))
+
+    db_conn = sqlite3.connect(db)
+    rows = db_conn.execute(
+        "SELECT index_in_stack, zarr_group FROM image_refs ORDER BY index_in_stack"
+    ).fetchall()
+    db_conn.close()
+
+    assert len(rows) == 3
+    assert [r[0] for r in rows] == [0, 1, 2]
+
+    store = zarr.open_group(str(tmp_path / "bt.zarr"), mode="r")
+    arr = cast("zarr.Array", store[rows[0][1]])
+    assert arr.shape == (3, 4, 4)

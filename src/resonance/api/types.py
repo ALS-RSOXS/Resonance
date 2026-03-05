@@ -1,8 +1,11 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal, get_args
 
+import numpy as np
 import pandas as pd
 from uncertainties import Variable
+
+from resonance.api.header_map import normalize_header
 
 # ============================================================================
 # Custom Exceptions
@@ -262,17 +265,16 @@ class ScanResult:
     exposure_time: float
     timestamp: float
     raw_data: dict[str, list[float]]  # For debugging
+    image: np.ndarray | None = field(default=None)
 
     def to_series(self) -> pd.Series:
-        """Convert to pandas Series with proper column names"""
-        data = {}
-        # Motor positions
+        """Convert to pandas Series with canonical column names."""
+        data: dict[str, float] = {}
         for motor_name, pos in self.motors.items():
-            data[f"{motor_name}_position"] = pos
-        # AI data with mean and std
+            data[f"{normalize_header(motor_name)}_position"] = pos
         for chan, uval in self.ai_data.items():
-            data[f"{chan}_mean"] = uval.nominal_value
-            data[f"{chan}_std"] = uval.std_dev
-        data["exposure"] = self.exposure_time
+            data[f"{normalize_header(chan)}_mean"] = uval.nominal_value
+            data[f"{normalize_header(chan)}_std"] = uval.std_dev
+        data[normalize_header("exposure")] = self.exposure_time
         data["timestamp"] = self.timestamp
         return pd.Series(data)

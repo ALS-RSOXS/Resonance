@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Final
 if TYPE_CHECKING:
     import sqlite3
 
-BEAMTIME_SCHEMA_VERSION: Final[int] = 1
+BEAMTIME_SCHEMA_VERSION: Final[int] = 2
 
 _DDL = """
 PRAGMA foreign_keys = ON;
@@ -62,15 +62,15 @@ CREATE INDEX IF NOT EXISTS idx_events_stream ON events(stream_uid);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_events_seq ON events(stream_uid, seq_num);
 
 CREATE TABLE IF NOT EXISTS image_refs (
-    -- TODO: add compression_codec column when detector integration is added
-    id             INTEGER PRIMARY KEY AUTOINCREMENT,
-    event_uid      TEXT NOT NULL REFERENCES events(uid) ON DELETE CASCADE,
-    field_name     TEXT NOT NULL,
-    zarr_group     TEXT NOT NULL,
-    index_in_stack INTEGER NOT NULL,
-    shape_x        INTEGER NOT NULL,
-    shape_y        INTEGER NOT NULL,
-    dtype          TEXT NOT NULL
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_uid         TEXT NOT NULL REFERENCES events(uid) ON DELETE CASCADE,
+    field_name        TEXT NOT NULL,
+    zarr_group        TEXT NOT NULL,
+    index_in_stack    INTEGER NOT NULL,
+    shape_x           INTEGER NOT NULL,
+    shape_y           INTEGER NOT NULL,
+    dtype             TEXT NOT NULL,
+    compression_codec TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_image_refs_event ON image_refs(event_uid);
@@ -106,44 +106,42 @@ def create_beamtime_schema(conn: sqlite3.Connection) -> None:
 
 
 def migrate_beamtime_schema(
-    conn: sqlite3.Connection,
-    target_version: int = BEAMTIME_SCHEMA_VERSION,
+    conn: sqlite3.Connection, target_version: int = BEAMTIME_SCHEMA_VERSION
 ) -> None:
-    """
-    Apply pending schema migrations up to target_version.
+    """Apply pending schema migrations up to target_version.
 
     Parameters
     ----------
     conn : sqlite3.Connection
         Open connection to the beamtime SQLite database file.
     target_version : int, optional
-        Schema version to migrate to. Defaults to ``BEAMTIME_SCHEMA_VERSION``.
+        Schema version to migrate to. Defaults to BEAMTIME_SCHEMA_VERSION.
 
     Raises
     ------
     RuntimeError
-        If the database's current ``user_version`` is greater than
-        ``target_version``, indicating a downgrade attempt or a database
-        written by a newer version of this software.
-
-    Notes
-    -----
-    Migration steps are applied sequentially from current_version + 1 up to
-    target_version. Version 1 is the initial schema; future versions will add
-    individual ``ALTER TABLE`` or data-transform statements here.
+        If target_version is less than the current schema version (downgrade not supported).
     """
-    (current_version,) = conn.execute("PRAGMA user_version").fetchone()
-    if current_version == target_version:
+    current = conn.execute("PRAGMA user_version").fetchone()[0]
+    if current == target_version:
         return
-    if current_version > target_version:
+    if current > target_version:
         raise RuntimeError(
-            f"Database schema version {current_version} is newer than "
-            f"target version {target_version}. Downgrade is not supported."
+            f"Cannot downgrade schema from version {current} to {target_version}."
         )
-    raise NotImplementedError(
-        f"No migration path from schema version {current_version} to {target_version}. "
-        "Schema migrations have not yet been implemented."
-    )
+    if current < 1:
+        create_beamtime_schema(conn)
+        return
+    if current == 1 and target_version >= 2:
+        conn.execute("ALTER TABLE image_refs ADD COLUMN compression_codec TEXT")
+        conn.execute("PRAGMA user_version = 2")
+        conn.commit()
+        current = 2
+    if current < target_version:
+        raise NotImplementedError(
+            f"No migration path from schema version {current} to {target_version}. "
+            "Schema migrations have not yet been implemented."
+        )
 
 
 INDEX_SCHEMA_VERSION: Final[int] = 1

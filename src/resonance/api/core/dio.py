@@ -26,6 +26,17 @@ class DIOAccessor:
     Wraps BCSz digital I/O channels. `read` reads digital inputs; `set` writes
     digital outputs. The shutter channel ("Light Output", "Shutter Output", etc.)
     is the most common use case. Values are always coerced to bool.
+
+    Examples
+    --------
+    >>> state = await bl.dio.read("Shutter Output", "Light Output")
+    >>> print(state)
+    {'Shutter Output': True, 'Light Output': True}
+    >>> await bl.dio.set("Shutter Output", False)
+    >>> await bl.dio.set("Light Output", True)
+    >>> state = await bl.dio.read("Shutter Output", "Light Output")
+    >>> print(state)
+    {'Shutter Output': False, 'Light Output': True}
     """
 
     def __init__(self, conn: BCSz.BCSServer) -> None:
@@ -64,8 +75,7 @@ class DIOAccessor:
 
         response: dict = await self._conn.get_di(chans=list(channels))
         return {
-            chan: bool(data)
-            for chan, data in zip(response["chans"], response["data"])
+            chan: bool(data) for chan, data in zip(response["chans"], response["data"])
         }
 
     async def set(self, channel: str, value: bool | int) -> None:
@@ -103,9 +113,7 @@ class DIOAccessor:
             )
 
         if not isinstance(value, bool | int):
-            raise ValueError(
-                f"value must be bool or int, got {type(value).__name__!r}"
-            )
+            raise ValueError(f"value must be bool or int, got {type(value).__name__!r}")
 
         bool_value = bool(value)
 

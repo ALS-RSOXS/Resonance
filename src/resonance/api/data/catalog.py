@@ -3,14 +3,13 @@ from __future__ import annotations
 import json
 import sqlite3
 from pathlib import Path  # noqa: TC003
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
+import numpy as np
 import pandas as pd
+import zarr
 
 from resonance.api.data.models import RunSummary, SampleMetadata
-
-if TYPE_CHECKING:
-    import numpy as np
 
 _SQL_RECENT = """
 SELECT r.uid, r.plan_name, r.time_start, r.time_stop, r.exit_status,
@@ -42,6 +41,15 @@ WHERE s.run_uid = ? AND s.name = ?
 ORDER BY e.seq_num
 """
 
+_SQL_IMAGE_REFS = """
+    SELECT ir.zarr_group, ir.index_in_stack, ir.shape_x, ir.shape_y, ir.dtype, e.seq_num
+    FROM image_refs ir
+    JOIN events e ON ir.event_uid = e.uid
+    JOIN streams s ON e.stream_uid = s.uid
+    WHERE s.run_uid = ? AND ir.field_name = ?
+    ORDER BY e.seq_num
+"""
+
 
 def _row_to_run_summary(row: sqlite3.Row) -> RunSummary:
     return RunSummary(
@@ -57,10 +65,14 @@ def _row_to_run_summary(row: sqlite3.Row) -> RunSummary:
 class Catalog:
     """Read-only catalog over a per-beamtime SQLite database.
 
+    The catalog reads from a ``.db`` SQLite file and an adjacent ``.zarr``
+    directory store that holds detector image arrays.
+
     Parameters
     ----------
     db_path : Path
-        Path to the beamtime SQLite database file.
+        Path to the beamtime SQLite database file. The Zarr store is
+        expected at ``db_path.with_suffix(".zarr")``.
 
     Attributes
     ----------
@@ -68,10 +80,13 @@ class Catalog:
         Read-only connection to the database.
     _db_path : Path
         Resolved path passed at construction time.
+    _zarr_path : Path
+        Path to the adjacent Zarr store directory.
     """
 
     def __init__(self, db_path: Path) -> None:
         self._db_path = db_path
+        self._zarr_path = db_path.with_suffix(".zarr")
         self._conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
         self._conn.row_factory = sqlite3.Row
 
@@ -128,7 +143,7 @@ class Catalog:
         row = self._conn.execute(_SQL_RUN_BY_UID, (uid,)).fetchone()
         if row is None:
             raise KeyError(uid)
-        return Run(self._conn, dict(row))
+        return Run(self._conn, dict(row), zarr_path=self._zarr_path)
 
     def close(self) -> None:
         """Close the underlying database connection."""
@@ -155,6 +170,8 @@ class Run:
         Active connection to the beamtime database.
     row : dict[str, Any]
         Deserialized row from the ``runs`` table.
+    zarr_path : Path
+        Path to the adjacent Zarr store directory.
 
     Attributes
     ----------
@@ -162,11 +179,16 @@ class Run:
         Shared database connection from the parent Catalog.
     _row : dict[str, Any]
         Raw column values for this run.
+    _zarr_path : Path
+        Path to the Zarr store for detector images.
     """
 
-    def __init__(self, conn: sqlite3.Connection, row: dict[str, Any]) -> None:
+    def __init__(
+        self, conn: sqlite3.Connection, row: dict[str, Any], zarr_path: Path
+    ) -> None:
         self._conn = conn
         self._row = row
+        self._zarr_path = zarr_path
 
     @property
     def uid(self) -> str:
@@ -253,6 +275,31 @@ class Run:
         remaining = [c for c in df.columns if c not in leading]
         return pd.DataFrame(df[leading + remaining])
 
+    def images(self, field: str = "detector_image") -> LazyImageSequence:
+        """Return a lazy accessor for detector images in this run.
+
+        Images are not loaded until explicitly indexed. Each frame is stored
+        as a slice of a Zarr array on the filesystem.
+
+        Parameters
+        ----------
+        field : str, optional
+            The image field name to load (default: "detector_image").
+
+        Returns
+        -------
+        LazyImageSequence
+            Lazy accessor with length equal to the number of images in this run.
+
+        Notes
+        -----
+        Returns an empty LazyImageSequence if no images are stored for the given
+        field or if the Zarr store does not exist.
+        """
+        rows = self._conn.execute(_SQL_IMAGE_REFS, (self._row["uid"], field)).fetchall()
+        refs = [dict(r) for r in rows]
+        return LazyImageSequence(self._conn, refs, zarr_store_path=self._zarr_path)
+
 
 class LazyImageSequence:
     """Lazy accessor for detector images referenced via Zarr.
@@ -267,6 +314,8 @@ class LazyImageSequence:
         Active connection to the beamtime database.
     refs : list[dict[str, Any]]
         List of deserialized rows from the ``image_refs`` table.
+    zarr_store_path : Path
+        Path to the Zarr store directory containing detector arrays.
 
     Attributes
     ----------
@@ -274,11 +323,19 @@ class LazyImageSequence:
         Shared database connection from the parent Catalog.
     _refs : list[dict[str, Any]]
         Image reference metadata, one entry per frame.
+    _zarr_store_path : Path
+        Path to the Zarr store directory.
     """
 
-    def __init__(self, conn: sqlite3.Connection, refs: list[dict[str, Any]]) -> None:
+    def __init__(
+        self,
+        conn: sqlite3.Connection,
+        refs: list[dict[str, Any]],
+        zarr_store_path: Path,
+    ) -> None:
         self._conn = conn
         self._refs = refs
+        self._zarr_store_path = zarr_store_path
 
     def __len__(self) -> int:
         return len(self._refs)
@@ -291,19 +348,40 @@ class LazyImageSequence:
         return (len(self._refs), self._refs[0]["shape_x"], self._refs[0]["shape_y"])
 
     def __getitem__(self, idx: int | slice) -> np.ndarray:
-        """Raises NotImplementedError until Zarr detector integration is added.
+        """Load one or more detector images from the Zarr store.
 
         Parameters
         ----------
         idx : int or slice
             Frame index or slice.
 
+        Returns
+        -------
+        np.ndarray
+            A single (shape_x, shape_y) array for int index, or a stacked
+            (n, shape_x, shape_y) array for slice index.
+
         Raises
         ------
-        NotImplementedError
-            Always; Zarr-backed image loading is not yet implemented.
+        IndexError
+            If idx is out of range.
+        TypeError
+            If idx is not int or slice.
         """
-        raise NotImplementedError(
-            "Image loading from Zarr is not yet implemented. "
-            "Detector integration is pending."
-        )
+        if isinstance(idx, int):
+            if idx < -len(self._refs) or idx >= len(self._refs):
+                raise IndexError(
+                    f"index {idx} out of range for LazyImageSequence of length {len(self._refs)}"
+                )
+            ref = self._refs[idx] if idx >= 0 else self._refs[len(self._refs) + idx]
+            store = zarr.open_group(str(self._zarr_store_path), mode="r")
+            arr = store[ref["zarr_group"]]
+            return np.asarray(arr[ref["index_in_stack"]])
+        if isinstance(idx, slice):
+            indices = range(*idx.indices(len(self._refs)))
+            return (
+                np.stack([self[i] for i in indices])
+                if indices
+                else np.empty((0,), dtype=np.int32)
+            )
+        raise TypeError(f"indices must be int or slice, not {type(idx).__name__}")

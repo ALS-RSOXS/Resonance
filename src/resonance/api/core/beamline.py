@@ -118,6 +118,7 @@ class Beamline:
         progress: bool = True,
         actuate_every: bool = False,
         writer: RunWriter | None = None,
+        with_detector: bool = False,
     ) -> pd.DataFrame:
         """
         Execute a scan defined by a DataFrame.
@@ -149,6 +150,10 @@ class Beamline:
             If provided, scan data are persisted to the beamtime SQLite database
             via the writer. The caller is responsible for constructing and
             opening the writer before passing it here.
+        with_detector : bool, optional
+            If True, acquire a 2D detector image at each scan point using the
+            beamline's AreaDetector. Requires a writer for image persistence.
+            Shutter actuation is hardware-driven (default: False).
 
         Returns
         -------
@@ -168,7 +173,12 @@ class Beamline:
             shutter=shutter,
             actuate_every=actuate_every,
         )
-        return await self._executor.execute_scan(scan_plan, progress=progress, writer=writer)
+        return await self._executor.execute_scan(
+            scan_plan,
+            progress=progress,
+            writer=writer,
+            detector=self.detector if with_detector else None,
+        )
 
     async def abort_scan(self) -> None:
         """

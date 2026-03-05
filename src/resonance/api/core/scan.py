@@ -23,6 +23,7 @@ from resonance.api.core.primitives import (
     shutter_control,
     wait_for_settle,
 )
+from resonance.api.header_map import normalize_header
 from resonance.api.types import ScanAbortedError, ScanPoint, ScanResult
 from resonance.api.validation import validate_scan_dataframe
 
@@ -32,6 +33,7 @@ if TYPE_CHECKING:
     from bcs import BCSz
     from uncertainties import Variable
 
+    from resonance.api.core.det import AreaDetector
     from resonance.api.data.writer import RunWriter
 
 
@@ -52,6 +54,15 @@ class ScanPlan:
     actuate_every : bool
         If True, the shutter is opened and closed per point.
         If False, the shutter is opened once for the entire scan.
+
+    Examples
+    --------
+    >>> df = pd.DataFrame({
+    ...     "Sample X": [0, 10, 20],
+    ...     "Sample Y": [0, 0, 0],
+    ...     "exposure": [0.1, 0.1, 0.1],
+    ... })
+    >>> scan_plan = ScanPlan.from_dataframe(df, ai_channels=["Photodiode"])
     """
 
     def __init__(
@@ -291,6 +302,7 @@ class ScanExecutor:
         motor_timeout: float = 30.0,
         restore_motors: bool = False,
         use_shutter: bool = True,
+        detector: AreaDetector | None = None,
     ) -> ScanResult:
         """
         Execute a single scan point.
@@ -307,6 +319,10 @@ class ScanExecutor:
         use_shutter : bool
             If True, the shutter is opened and closed around acquisition.
             Pass False when the caller already holds the shutter open.
+        detector : AreaDetector or None, optional
+            If provided, a 2D detector image is acquired after AI acquisition using
+            the point's exposure_time. Shutter actuation is hardware-driven; no
+            plan-level shutter wraps this call.
 
         Returns
         -------
@@ -338,7 +354,7 @@ class ScanExecutor:
             async def _acquire() -> dict[str, Any]:
                 if await self._abort_flag.is_set():
                     raise ScanAbortedError("Scan aborted before acquisition")
-                await self._conn.acquire_data(chans=channels, time=point.exposure_time)   # pyright: ignore[reportArgumentType]
+                await self._conn.acquire_data(chans=channels, time=point.exposure_time)  # pyright: ignore[reportArgumentType]
                 return await self._conn.get_acquired_array(chans=channels)
 
             if use_shutter:
@@ -363,7 +379,7 @@ class ScanExecutor:
                 std_err = float(np.nanstd(data, ddof=1) / np.sqrt(data.size))
                 ai_data[name] = ufloat(mean, std_err)
 
-        return ScanResult(
+        scan_result = ScanResult(
             index=point.index,
             motors=point.motors,
             ai_data=ai_data,
@@ -371,12 +387,16 @@ class ScanExecutor:
             timestamp=time.time(),
             raw_data=raw_data,
         )
+        if detector is not None:
+            scan_result.image = await detector.acquire(point.exposure_time)
+        return scan_result
 
     async def execute_scan(
         self,
         scan_plan: ScanPlan,
         progress: bool = True,
         writer: RunWriter | None = None,
+        detector: AreaDetector | None = None,
     ) -> pd.DataFrame:
         """
         Execute a complete scan plan and return results as a DataFrame.
@@ -414,6 +434,10 @@ class ScanExecutor:
             timestamps) are written to the open beamtime database. The writer
             must not have an open run before this method is called; it will
             call open_run, open_stream, write_event, and close_run internally.
+        detector : AreaDetector or None, optional
+            If provided, a 2D image is acquired at each scan point and written to
+            the "detector_image" field in the primary stream. Requires writer to
+            be set for persistence. Shutter is hardware-driven.
 
         Returns
         -------
@@ -431,15 +455,29 @@ class ScanExecutor:
         if writer is not None:
             data_keys: dict[str, dict[str, str]] = {
                 **{
-                    f"{m}_position": {"dtype": "number", "units": "mm", "source": "motor"}
+                    f"{normalize_header(m)}_position": {
+                        "dtype": "number",
+                        "units": "mm",
+                        "source": "motor",
+                    }
                     for m in scan_plan.motor_names
                 },
                 **{
-                    ch: {"dtype": "number", "units": "V", "source": "ai"}
+                    normalize_header(ch): {
+                        "dtype": "number",
+                        "units": "V",
+                        "source": "ai",
+                    }
                     for ch in scan_plan.ai_channels
                 },
-                "exposure": {"dtype": "number", "units": "s", "source": "plan"},
+                normalize_header("exposure"): {
+                    "dtype": "number",
+                    "units": "s",
+                    "source": "plan",
+                },
             }
+            if detector is not None:
+                data_keys["detector_image"] = detector.describe()
             # TODO: propagate plan_name from ScanPlan once the attribute is added
             writer.open_run("scan")
             writer.open_stream("primary", data_keys)
@@ -462,20 +500,35 @@ class ScanExecutor:
                     point,
                     restore_motors=False,
                     use_shutter=scan_plan.actuate_every,
+                    detector=detector,
                 )
                 results.append(result)
                 if writer is not None:
                     event_data: dict[str, float | int | str | bool] = {
-                        **{f"{m}_position": v for m, v in result.motors.items()},
-                        **{ch: result.ai_data[ch].nominal_value for ch in result.ai_data},
-                        "exposure": result.exposure_time,
+                        **{
+                            f"{normalize_header(m)}_position": v
+                            for m, v in result.motors.items()
+                        },
+                        **{
+                            normalize_header(ch): result.ai_data[ch].nominal_value
+                            for ch in result.ai_data
+                        },
+                        normalize_header("exposure"): result.exposure_time,
                     }
                     timestamps: dict[str, float] = {
-                        **{f"{m}_position": result.timestamp for m in result.motors},
-                        **dict.fromkeys(result.ai_data, result.timestamp),
-                        "exposure": result.timestamp,
+                        **{
+                            f"{normalize_header(m)}_position": result.timestamp
+                            for m in result.motors
+                        },
+                        **{
+                            normalize_header(ch): result.timestamp
+                            for ch in result.ai_data
+                        },
+                        normalize_header("exposure"): result.timestamp,
                     }
-                    writer.write_event(event_data, timestamps)
+                    event_uid = writer.write_event(event_data, timestamps)
+                    if result.image is not None:
+                        writer.write_image(event_uid, "detector_image", result.image)
 
         _exit_status = "success"
         try:

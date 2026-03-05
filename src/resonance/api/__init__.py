@@ -29,6 +29,7 @@ from resonance.api.core import (
     wait_for_motors,
     wait_for_settle,
 )
+from resonance.api.header_map import HEADER_NAMES, normalize_header
 from resonance.api.types import (
     # Type literals
     AI,
@@ -71,6 +72,9 @@ from resonance.api.validation import (
 __all__ = [
     # Version
     "__version__",
+    # Header map
+    "HEADER_NAMES",
+    "normalize_header",
     # Exceptions
     "RsoxsError",
     "MotorError",
