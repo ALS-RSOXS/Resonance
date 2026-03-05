@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 import numpy as np
 
 from resonance.api.core.det import (
-    DETECTOR_NAME,
+    AXIS_PHOTONIQUE,
     AreaDetector,
     ExposureQuality,
     _parse_acquired2d_string,
@@ -95,7 +95,7 @@ def test_describe_after_acquire() -> None:
 
 
 def test_detector_name_constant() -> None:
-    assert DETECTOR_NAME == "Axis Photonique"
+    assert AXIS_PHOTONIQUE == "Axis Photonique"
 
 
 def test_exposure_quality_dataclass_fields() -> None:

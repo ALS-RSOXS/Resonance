@@ -9,7 +9,7 @@ import numpy as np
 if TYPE_CHECKING:
     from bcs import BCSz
 
-DETECTOR_NAME: Final[str] = "Axis Photonique"
+AXIS_PHOTONIQUE: Final[str] = "Axis Photonique"
 
 
 async def get_acquired2d_string(conn: BCSz.BCSServer, name: str) -> dict[str, Any]:
@@ -72,7 +72,7 @@ class AreaDetector:
         Instrument name registered in BCSz, defaults to ``DETECTOR_NAME``.
     """
 
-    def __init__(self, conn: BCSz.BCSServer, *, name: str = DETECTOR_NAME) -> None:
+    def __init__(self, conn: BCSz.BCSServer, *, name: str = AXIS_PHOTONIQUE) -> None:
         self._conn = conn
         self._name = name
         self._last_shape: tuple[int, int] | None = None
