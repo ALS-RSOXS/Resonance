@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Literal, get_args
 
 import pandas as pd
-from uncertainties import ufloat
+from uncertainties import Variable
 
 # ============================================================================
 # Custom Exceptions
@@ -258,7 +258,7 @@ class ScanResult:
 
     index: int
     motors: dict[str, float]
-    ai_data: dict[str, ufloat]  # Channel name -> ufloat value
+    ai_data: dict[str, Variable]  # Channel name -> ufloat value
     exposure_time: float
     timestamp: float
     raw_data: dict[str, list[float]]  # For debugging

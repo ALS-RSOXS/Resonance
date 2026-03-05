@@ -242,16 +242,16 @@ class Run:
         """
         rows = self._conn.execute(_SQL_EVENTS, (self._row["uid"], stream)).fetchall()
         if not rows:
-            return pd.DataFrame(columns=["seq_num", "time"])
-        records = []
+            return pd.DataFrame(columns=pd.Index(["seq_num", "time"]))
+        records: list[dict[str, Any]] = []
         for row in rows:
-            record = {"seq_num": row["seq_num"], "time": row["time"]}
+            record: dict[str, Any] = {"seq_num": row["seq_num"], "time": row["time"]}
             record.update(json.loads(row["data"]))
             records.append(record)
         df = pd.DataFrame(records)
         leading = ["seq_num", "time"]
         remaining = [c for c in df.columns if c not in leading]
-        return df[leading + remaining]
+        return pd.DataFrame(df[leading + remaining])
 
 
 class LazyImageSequence:

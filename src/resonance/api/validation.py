@@ -93,11 +93,6 @@ def validate_motor_columns(df: pd.DataFrame) -> list[str]:
     return motor_cols
 
 
-# ============================================================================
-# DataFrame Validation
-# ============================================================================
-
-
 def validate_scan_dataframe(df: pd.DataFrame) -> tuple[list[str], str | None]:
     """
     Validate complete scan DataFrame.
@@ -123,6 +118,10 @@ def validate_scan_dataframe(df: pd.DataFrame) -> tuple[list[str], str | None]:
     # Validate exposure values if column exists
     if exposure_col is not None:
         exposure_values = df[exposure_col]
+        if not isinstance(exposure_values, pd.Series):
+            raise ValidationError(
+                f"Exposure column '{exposure_col}' is not a pandas Series"
+            )
 
         # Check for NaN values in exposure
         if exposure_values.isna().any():
@@ -140,7 +139,9 @@ def validate_scan_dataframe(df: pd.DataFrame) -> tuple[list[str], str | None]:
 
     # Check for NaN values in motor columns
     for col in motor_cols:
-        if df[col].isna().any():
+        if not isinstance(df[col], pd.Series):
+            raise ValidationError(f"Motor column '{col}' is not a pandas Series")
+        if df[col].isna().any():  # pyright: ignore[reportGeneralTypeIssues]
             nan_indices = df[df[col].isna()].index.tolist()
             raise ValidationError(
                 f"NaN values found in motor column '{col}' at rows: {nan_indices}"

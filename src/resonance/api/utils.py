@@ -5,7 +5,7 @@ This module provides helper functions for common beamline tasks
 like motor alignment, grid scan generation, and data analysis.
 """
 
-from typing import Literal
+from typing import Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -232,10 +232,9 @@ def calculate_center_of_mass(
     if use_mean and not signal_col.endswith("_mean"):
         signal_col = f"{signal_col}_mean"
 
-    positions = scan_data[motor_col].values
-    signal = scan_data[signal_col].values
+    positions = scan_data[motor_col].to_numpy(dtype=float)
+    signal = scan_data[signal_col].to_numpy(dtype=float)
 
-    # Ensure signal is positive
     signal = signal - signal.min()
 
     if signal.sum() == 0:
@@ -292,7 +291,7 @@ def resample_scan_data(
         ]
 
     # Create uniform grid
-    motor_positions = scan_data[motor_col].values
+    motor_positions = scan_data[motor_col].to_numpy(dtype=float)
     new_positions = np.linspace(
         motor_positions.min(), motor_positions.max(), num_points
     )
@@ -303,9 +302,10 @@ def resample_scan_data(
     for col in columns_to_interpolate:
         interpolator = interp1d(
             motor_positions,
-            scan_data[col].values,
+            scan_data[col].to_numpy(dtype=float),
             kind="linear",
-            fill_value="extrapolate",
+            bounds_error=False,
+            fill_value=cast("float", "extrapolate"),
         )
         resampled_data[col] = interpolator(new_positions)
 
@@ -353,7 +353,9 @@ def merge_scans(
     if average_overlaps:
         # Group by motor position and average
         numeric_cols = combined.select_dtypes(include=[np.number]).columns
-        combined = combined.groupby(motor_col, as_index=False)[numeric_cols].mean()
+        combined = pd.DataFrame(
+            combined.groupby(motor_col, as_index=False)[numeric_cols].mean()
+        )
 
     return combined
 
@@ -364,7 +366,6 @@ def knife_edge_analysis(
     signal_col: str,
     threshold: float = 0.5,
     direct_beam: Literal["above", "below"] = "above",
-    visaulize: bool = False,
 ) -> float:
     """
     Analyze knife-edge scan to find edge position.
@@ -401,10 +402,10 @@ def knife_edge_analysis(
     """
     if not signal_col.endswith("_mean"):
         signal_col = f"{signal_col}_mean"
-    positions = scan_data[motor_col].values
-    signal = scan_data[signal_col].values
+    positions = scan_data[motor_col].to_numpy(dtype=float)
+    signal = scan_data[signal_col].to_numpy(dtype=float)
 
-    max_signal = np.max(signal)
+    max_signal = float(np.max(signal))
     threshold_value = threshold * max_signal
     # (above) calculate the first index where signal crosses threshold
     if direct_beam == "above":
@@ -412,4 +413,4 @@ def knife_edge_analysis(
     # (below) reverse the signal and find the first crossing
     else:
         edge_idx = np.where(signal[::-1] <= threshold_value)[0][0]
-    return positions[edge_idx]
+    return float(positions[edge_idx])
