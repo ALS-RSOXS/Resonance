@@ -14,6 +14,7 @@ built on BCSz for hardware control. Core components:
 __version__ = "0.1.0"
 
 
+from resonance.api.header_map import HEADER_NAMES, normalize_header
 from resonance.api.core import (
     AbortFlag,
     AIAccessor,
@@ -71,6 +72,9 @@ from resonance.api.validation import (
 __all__ = [
     # Version
     "__version__",
+    # Header map
+    "HEADER_NAMES",
+    "normalize_header",
     # Exceptions
     "RsoxsError",
     "MotorError",

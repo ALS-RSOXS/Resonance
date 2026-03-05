@@ -23,6 +23,7 @@ from resonance.api.core.primitives import (
     shutter_control,
     wait_for_settle,
 )
+from resonance.api.header_map import normalize_header
 from resonance.api.types import ScanAbortedError, ScanPoint, ScanResult
 from resonance.api.validation import validate_scan_dataframe
 
@@ -445,14 +446,14 @@ class ScanExecutor:
         if writer is not None:
             data_keys: dict[str, dict[str, str]] = {
                 **{
-                    f"{m}_position": {"dtype": "number", "units": "mm", "source": "motor"}
+                    f"{normalize_header(m)}_position": {"dtype": "number", "units": "mm", "source": "motor"}
                     for m in scan_plan.motor_names
                 },
                 **{
-                    ch: {"dtype": "number", "units": "V", "source": "ai"}
+                    normalize_header(ch): {"dtype": "number", "units": "V", "source": "ai"}
                     for ch in scan_plan.ai_channels
                 },
-                "exposure": {"dtype": "number", "units": "s", "source": "plan"},
+                normalize_header("exposure"): {"dtype": "number", "units": "s", "source": "plan"},
             }
             if detector is not None:
                 data_keys["detector_image"] = detector.describe()
@@ -483,14 +484,14 @@ class ScanExecutor:
                 results.append(result)
                 if writer is not None:
                     event_data: dict[str, float | int | str | bool] = {
-                        **{f"{m}_position": v for m, v in result.motors.items()},
-                        **{ch: result.ai_data[ch].nominal_value for ch in result.ai_data},
-                        "exposure": result.exposure_time,
+                        **{f"{normalize_header(m)}_position": v for m, v in result.motors.items()},
+                        **{normalize_header(ch): result.ai_data[ch].nominal_value for ch in result.ai_data},
+                        normalize_header("exposure"): result.exposure_time,
                     }
                     timestamps: dict[str, float] = {
-                        **{f"{m}_position": result.timestamp for m in result.motors},
-                        **dict.fromkeys(result.ai_data, result.timestamp),
-                        "exposure": result.timestamp,
+                        **{f"{normalize_header(m)}_position": result.timestamp for m in result.motors},
+                        **{normalize_header(ch): result.timestamp for ch in result.ai_data},
+                        normalize_header("exposure"): result.timestamp,
                     }
                     event_uid = writer.write_event(event_data, timestamps)
                     if result.image is not None:

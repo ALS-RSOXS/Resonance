@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Final
 
@@ -75,6 +76,52 @@ class AreaDetector:
         self._conn = conn
         self._name = name
         self._last_shape: tuple[int, int] | None = None
+
+    async def is_ready(self) -> bool:
+        """
+        Return whether the instrument driver is running and the detector is ready.
+
+        Uses BCSz GetInstrumentDriverStatus for the configured instrument name.
+
+        Returns
+        -------
+        bool
+            True if the driver is running and the detector can accept acquisitions.
+        """
+        res = await self._conn.get_instrument_driver_status(name=self._name)
+        return bool(res.get("running", False))
+
+    async def setup(self, *, timeout: float = 30.0, poll_interval: float = 0.5) -> None:
+        """
+        Ensure the detector driver is started and ready for acquisition.
+
+        Starts the instrument driver via BCSz if not already running, then
+        waits until is_ready() is True or timeout is reached.
+
+        Parameters
+        ----------
+        timeout : float, optional
+            Maximum time in seconds to wait for the driver to become ready.
+            Default 30.0.
+        poll_interval : float, optional
+            Seconds between readiness checks. Default 0.5.
+
+        Raises
+        ------
+        TimeoutError
+            If the driver did not report ready within timeout seconds.
+        """
+        await self._conn.start_instrument_driver(name=self._name)
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + timeout
+        while True:
+            if await self.is_ready():
+                return
+            if loop.time() >= deadline:
+                raise TimeoutError(
+                    f"Detector {self._name!r} did not become ready within {timeout} s"
+                )
+            await asyncio.sleep(poll_interval)
 
     async def acquire(self, exposure_seconds: float) -> np.ndarray | None:
         """
