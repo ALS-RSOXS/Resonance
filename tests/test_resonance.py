@@ -13,7 +13,10 @@ def test_import_resonance_api() -> None:
     import resonance.api
 
     assert hasattr(resonance.api, "RsoxsServer")
-    assert hasattr(resonance.api, "nexafs_scan")
+    assert hasattr(resonance.api, "Beamline")
+    assert hasattr(resonance.api, "MotorAccessor")
+    assert hasattr(resonance.api, "AIAccessor")
+    assert hasattr(resonance.api, "DIOAccessor")
 
 
 def test_import_resonance_mcp() -> None:
