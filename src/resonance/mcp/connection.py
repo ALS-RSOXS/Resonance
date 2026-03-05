@@ -1,20 +1,17 @@
-"""Connection management for RsoxsServer in MCP context."""
+"""Connection management for Beamline in MCP context."""
 
 import asyncio
 from typing import Optional
 
-try:
-    from api_dev.server import RsoxsServer
-except ImportError:
-    from ..api_dev.server import RsoxsServer
+from resonance.api.core import Beamline
 
 
 class ConnectionManager:
-    """Singleton connection manager for RsoxsServer."""
+    """Singleton connection manager for Beamline."""
 
     _instance: Optional["ConnectionManager"] = None
     _lock = asyncio.Lock()
-    _server: Optional[RsoxsServer] = None
+    _server: Beamline | None = None
     _connected: bool = False
 
     def __new__(cls):
@@ -22,14 +19,14 @@ class ConnectionManager:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    async def get_server(self) -> RsoxsServer:
+    async def get_server(self) -> Beamline:
         """
-        Get or create RsoxsServer instance.
+        Get or create Beamline instance.
 
         Returns
         -------
-        RsoxsServer
-            Connected server instance
+        Beamline
+            Connected beamline instance
 
         Raises
         ------
@@ -38,13 +35,13 @@ class ConnectionManager:
         """
         async with self._lock:
             if self._server is None or not self._connected:
-                self._server = await RsoxsServer.create()
+                self._server = await Beamline.create()
                 self._connected = True
             return self._server
 
     async def ensure_connected(self) -> None:
         """
-        Ensure server is connected, reconnect if needed.
+        Ensure beamline is connected, reconnect if needed.
 
         Raises
         ------
@@ -56,26 +53,30 @@ class ConnectionManager:
         async with self._lock:
             if self._server is None or not self._connected:
                 try:
-                    self._server = await RsoxsServer.create()
+                    self._server = await Beamline.create()
                     self._connected = True
                 except ConnectionError as e:
                     self._connected = False
                     self._server = None
-                    raise ConnectionError(f"Failed to connect to beamline server: {e}") from e
+                    raise ConnectionError(
+                        f"Failed to connect to beamline server: {e}"
+                    ) from e
                 except Exception as e:
                     self._connected = False
                     self._server = None
-                    raise RuntimeError(f"Unexpected error connecting to beamline server: {e}") from e
+                    raise RuntimeError(
+                        f"Unexpected error connecting to beamline server: {e}"
+                    ) from e
 
     async def disconnect(self) -> None:
-        """Disconnect from server."""
+        """Disconnect from beamline."""
         async with self._lock:
             self._connected = False
             self._server = None
 
     @property
     def is_connected(self) -> bool:
-        """Check if server is connected."""
+        """Check if beamline is connected."""
         return self._connected and self._server is not None
 
 

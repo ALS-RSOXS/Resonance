@@ -1,51 +1,35 @@
 """
 RSoXS Beamline Control API
 
-A high-level, user-friendly Python interface for the ALS RSoXS beamline that:
-- Prevents race conditions through proper async/await patterns
-- Accepts pandas DataFrames as scan definitions
-- Uses uncertainties.ufloat for automatic error propagation
-- Provides safe primitives and high-level orchestration
-- Implements comprehensive error handling with automatic recovery
+Provides the Beamline interface and typed accessors for the ALS RSoXS beamline,
+built on BCSz for hardware control. Core components:
+
+- Beamline: high-level facade (scan_from_dataframe, abort_scan, is_scanning)
+- MotorAccessor, AIAccessor, DIOAccessor: typed hardware accessors
+- ScanPlan, ScanExecutor: DataFrame-driven scan orchestration
+- Primitives: AbortFlag, motor_move, shutter_control, wait_for_motors, wait_for_settle
+- Types: Motor, AI, DIO, Command literals and all domain exceptions
 """
 
 __version__ = "0.1.0"
 
-# Core types and exceptions
-# Type-safe accessors
-from .accessors import (
-    RsoxsAccessor,
-    TabularResponse,
-)
 
-# Core async primitives
-from .core import (
+from resonance.api.core import (
     AbortFlag,
+    AIAccessor,
+    Beamline,
+    Connection,
+    DIOAccessor,
+    MotorAccessor,
+    MotorState,
+    ScanExecutor,
+    ScanPlan,
     motor_move,
     shutter_control,
     wait_for_motors,
     wait_for_settle,
 )
-
-# NEXAFS functionality
-from .nexafs import (
-    calculate_nexafs,
-    nexafs_scan,
-    normalize_to_edge_jump,
-)
-
-# Scan orchestration
-from .scan import (
-    ScanExecutor,
-    ScanPlan,
-)
-
-# High-level server
-from .server import (
-    Connection,
-    RsoxsServer,
-)
-from .types import (
+from resonance.api.types import (
     # Type literals
     AI,
     DIO,
@@ -54,15 +38,12 @@ from .types import (
     Motor,
     MotorError,
     MotorTimeoutError,
-    # Exceptions
     RsoxsError,
     ScanAbortedError,
-    # Data structures
     ScanPoint,
     ScanResult,
     ShutterError,
     ValidationError,
-    # Type tuples for validation
     ai,
     command,
     dio,
@@ -70,7 +51,7 @@ from .types import (
 )
 
 # Utility functions
-from .utils import (
+from resonance.api.utils import (
     calculate_center_of_mass,
     create_energy_scan,
     create_grid_scan,
@@ -81,7 +62,7 @@ from .utils import (
 )
 
 # Validation utilities
-from .validation import (
+from resonance.api.validation import (
     find_exposure_column,
     validate_motor_columns,
     validate_scan_dataframe,
@@ -101,7 +82,6 @@ __all__ = [
     # Data structures
     "ScanPoint",
     "ScanResult",
-    "TabularResponse",
     # Types
     "AI",
     "Motor",
@@ -115,23 +95,20 @@ __all__ = [
     "find_exposure_column",
     "validate_motor_columns",
     "validate_scan_dataframe",
-    # Core primitives
+    # Core primitives and accessors
     "AbortFlag",
     "wait_for_motors",
     "wait_for_settle",
     "motor_move",
     "shutter_control",
-    # Scan
-    "ScanPlan",
-    "ScanExecutor",
-    # Accessors and Server
-    "RsoxsAccessor",
-    "RsoxsServer",
+    "AIAccessor",
+    "Beamline",
     "Connection",
-    # NEXAFS
-    "calculate_nexafs",
-    "nexafs_scan",
-    "normalize_to_edge_jump",
+    "DIOAccessor",
+    "MotorAccessor",
+    "MotorState",
+    "ScanExecutor",
+    "ScanPlan",
     # Utilities
     "create_grid_scan",
     "create_line_scan",
