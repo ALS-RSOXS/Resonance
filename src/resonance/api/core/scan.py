@@ -6,6 +6,13 @@ import asyncio
 import time
 from typing import TYPE_CHECKING, Any
 
+try:
+    from tqdm.asyncio import tqdm as _tqdm
+
+    _TQDM_AVAILABLE = True
+except ImportError:
+    _TQDM_AVAILABLE = False
+
 import numpy as np
 import pandas as pd
 from uncertainties import ufloat
@@ -23,6 +30,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from bcs import BCSz
+    from uncertainties import Variable
+
 
 class ScanPlan:
     """
@@ -327,7 +336,7 @@ class ScanExecutor:
             async def _acquire() -> dict[str, Any]:
                 if await self._abort_flag.is_set():
                     raise ScanAbortedError("Scan aborted before acquisition")
-                await self._conn.acquire_data(chans=channels, time=point.exposure_time)
+                await self._conn.acquire_data(chans=channels, time=point.exposure_time)   # pyright: ignore[reportArgumentType]
                 return await self._conn.get_acquired_array(chans=channels)
 
             if use_shutter:
@@ -339,7 +348,7 @@ class ScanExecutor:
             else:
                 result = await _acquire()
 
-        ai_data: dict[str, ufloat] = {}
+        ai_data: dict[str, Variable] = {}
         raw_data: dict[str, list[float]] = {}
         for chan_data in result["chans"]:
             name: str = chan_data["chan"]
@@ -415,16 +424,12 @@ class ScanExecutor:
 
         results: list[ScanResult] = []
 
-        if progress:
-            try:
-                from tqdm.asyncio import tqdm
-
-                iterator = tqdm(scan_plan.points, desc="Scanning", unit="pt")
-            except ImportError:
-                print("tqdm not available, showing simple progress")
-                iterator = iter(scan_plan.points)
-                progress = False
+        if progress and _TQDM_AVAILABLE:
+            iterator = _tqdm(scan_plan.points, desc="Scanning", unit="pt")
         else:
+            if progress and not _TQDM_AVAILABLE:
+                print("tqdm not available, showing simple progress")
+            progress = False
             iterator = iter(scan_plan.points)
 
         async def _run_points() -> None:

@@ -2,6 +2,7 @@
 
 import asyncio
 import time
+import warnings
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -190,7 +191,7 @@ async def motor_move(
                 )
                 await wait_for_motors(server, list(initial_pos.keys()), timeout=timeout)
             except Exception as e:
-                print(f"Warning: Failed to restore motor positions: {e}")
+                warnings.warn(f"Failed to restore motor positions: {e}", stacklevel=2)
 
 
 @asynccontextmanager
@@ -226,4 +227,4 @@ async def shutter_control(
         try:
             await server.set_do(chan=shutter, value=False)
         except Exception as e:
-            print(f"Warning: Failed to close shutter: {e}")
+            warnings.warn(f"Failed to close shutter: {e}", stacklevel=2)
