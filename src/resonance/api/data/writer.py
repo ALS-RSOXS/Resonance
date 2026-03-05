@@ -261,7 +261,7 @@ class RunWriter:
         if zarr_group in self._zarr_store:
             arr = self._zarr_store[zarr_group]
         else:
-            arr = self._zarr_store.require_dataset(
+            arr = self._zarr_store.require_array(
                 zarr_group,
                 shape=(0, *image.shape),
                 chunks=(1, *image.shape),
@@ -269,7 +269,7 @@ class RunWriter:
             )
 
         current_len = arr.shape[0]
-        arr.resize(current_len + 1, *image.shape)
+        arr.resize((current_len + 1, *image.shape))
         arr[current_len] = image
         index_in_stack = current_len
 

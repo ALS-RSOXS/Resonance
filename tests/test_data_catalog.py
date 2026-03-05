@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
 import pytest
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-from resonance.api.data.catalog import Catalog
+from resonance.api.data.catalog import Catalog, LazyImageSequence
 from resonance.api.data.models import SampleMetadata
 from resonance.api.data.writer import RunWriter
 
@@ -94,3 +95,53 @@ def test_catalog_context_manager(tmp_path: Path) -> None:
     with Catalog(path) as cat:
         results = cat.recent()
     assert len(results) == 1
+
+
+def _write_test_db_with_images(path: Path, n_images: int = 2) -> Path:
+    sample = SampleMetadata(name="PS")
+    w = RunWriter(path, sample)
+    w.open()
+    w.open_run("nexafs")
+    w.open_stream("primary", {"detector_image": {"dtype": "int32", "external": True}})
+    for i in range(n_images):
+        event_uid = w.write_event({"i": float(i)})
+        w.write_image(event_uid, "detector_image", np.ones((4, 4), dtype=np.int32) * i)
+    w.close_run()
+    w.close()
+    return path
+
+
+def test_run_images_shape(tmp_path: Path) -> None:
+    path = _write_test_db_with_images(tmp_path / "bt.db", n_images=3)
+    with Catalog(path) as cat:
+        run = cat[cat.recent(1)[0].uid]
+        imgs = run.images()
+    assert len(imgs) == 3
+    assert imgs.shape == (3, 4, 4)
+
+
+def test_run_images_getitem_int(tmp_path: Path) -> None:
+    path = _write_test_db_with_images(tmp_path / "bt.db", n_images=2)
+    with Catalog(path) as cat:
+        run = cat[cat.recent(1)[0].uid]
+        imgs = run.images()
+    np.testing.assert_array_equal(imgs[0], np.zeros((4, 4), dtype=np.int32))
+    np.testing.assert_array_equal(imgs[1], np.ones((4, 4), dtype=np.int32))
+
+
+def test_run_images_getitem_slice(tmp_path: Path) -> None:
+    path = _write_test_db_with_images(tmp_path / "bt.db", n_images=3)
+    with Catalog(path) as cat:
+        run = cat[cat.recent(1)[0].uid]
+        imgs = run.images()
+    sliced = imgs[0:2]
+    assert sliced.shape == (2, 4, 4)
+
+
+def test_run_images_empty_field(tmp_path: Path) -> None:
+    path = _write_test_db_with_images(tmp_path / "bt.db", n_images=2)
+    with Catalog(path) as cat:
+        run = cat[cat.recent(1)[0].uid]
+        imgs = run.images("nonexistent_field")
+    assert isinstance(imgs, LazyImageSequence)
+    assert len(imgs) == 0
