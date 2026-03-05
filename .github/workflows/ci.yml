@@ -27,7 +27,12 @@ jobs:
       - run: make install
       - run: make test
 
-  secrets_and_dependency_scan:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: make docs
     name: Secret and Dependency Scan
     runs-on: ubuntu-latest
     steps:
