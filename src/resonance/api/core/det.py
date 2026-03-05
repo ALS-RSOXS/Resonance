@@ -70,7 +70,7 @@ class AreaDetector:
         Active BCSz server connection.
     name : str, optional
         Instrument name registered in BCSz, defaults to ``Axis Photonique``.
-    
+
     Examples
     --------
     >>> image = await bl.detector.acquire(exposure_seconds=0.1)
