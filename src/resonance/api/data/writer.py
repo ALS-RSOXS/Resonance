@@ -7,6 +7,9 @@ from pathlib import Path  # noqa: TC003
 from typing import Any
 from uuid import uuid4
 
+import numpy as np  # noqa: TC002
+import zarr
+
 from resonance.api.data.models import SampleMetadata
 from resonance.api.data.schema import create_beamtime_schema
 
@@ -37,6 +40,8 @@ class RunWriter:
         Hex UID of the currently open stream, or empty string.
     _seq_num : int
         Event sequence counter within the current stream.
+    _zarr_store : zarr.Group or None
+        Open Zarr group for image storage, or None when closed.
     """
 
     def __init__(self, db_path: Path, sample: SampleMetadata) -> None:
@@ -46,6 +51,7 @@ class RunWriter:
         self._run_uid: str = ""
         self._stream_uid: str = ""
         self._seq_num: int = 0
+        self._zarr_store: zarr.Group | None = None
 
     def open(self) -> None:
         """Open the database connection and upsert the sample.
@@ -53,6 +59,8 @@ class RunWriter:
         Creates the beamtime schema if the database does not yet exist. If
         ``self._sample.id`` is None, the sample is looked up by name; if a
         matching row exists its id is loaded, otherwise a new row is inserted.
+        A Zarr store is opened (or created) alongside the ``.db`` file at
+        ``{db_path.stem}.zarr/``.
 
         Raises
         ------
@@ -88,6 +96,8 @@ class RunWriter:
                 conn.commit()
                 self._sample.id = cur.lastrowid
         self._conn = conn
+        zarr_path = self._db_path.with_suffix(".zarr")
+        self._zarr_store = zarr.open_group(str(zarr_path), mode="a")
 
     def open_run(self, plan_name: str, *, metadata: dict[str, Any] | None = None) -> str:
         """Insert a new run row and return its UID.
@@ -207,6 +217,78 @@ class RunWriter:
         )
         return uid
 
+    def write_image(self, event_uid: str, field_name: str, image: np.ndarray) -> None:
+        """Append a 2-D image frame to the Zarr store and record a reference in SQLite.
+
+        Parameters
+        ----------
+        event_uid : str
+            Hex UUID of the parent event row in the ``events`` table.
+        field_name : str
+            Detector field name, e.g. ``"ccd"``.
+        image : np.ndarray
+            2-D array of shape ``(height, width)`` to append.
+
+        Raises
+        ------
+        RuntimeError
+            If the writer is not open (``self._conn`` is None).
+        RuntimeError
+            If no run has been opened (``self._run_uid`` is empty).
+        RuntimeError
+            If no stream has been opened (``self._stream_uid`` is empty).
+
+        Notes
+        -----
+        The Zarr store lives at ``{db_path.stem}.zarr/`` alongside the ``.db``
+        file. Frames are appended to the array at
+        ``runs/{run_uid}/{field_name}`` inside the store. Each call grows the
+        array by one frame along axis 0. The ``image_refs`` row stores the
+        zarr group path and the zero-based frame index so the frame can be
+        retrieved without scanning the full array. ``compression_codec``
+        is recorded as ``"blosc"`` to document the Zarr default; actual
+        compression is controlled by zarr's compressor setting.
+        """
+        if self._conn is None:
+            raise RuntimeError("RunWriter is not open")
+        if not self._run_uid:
+            raise RuntimeError("No open run")
+        if not self._stream_uid:
+            raise RuntimeError("No open stream")
+
+        zarr_group = f"runs/{self._run_uid}/{field_name}"
+
+        if zarr_group in self._zarr_store:
+            arr = self._zarr_store[zarr_group]
+        else:
+            arr = self._zarr_store.require_dataset(
+                zarr_group,
+                shape=(0, *image.shape),
+                chunks=(1, *image.shape),
+                dtype=image.dtype,
+            )
+
+        current_len = arr.shape[0]
+        arr.resize(current_len + 1, *image.shape)
+        arr[current_len] = image
+        index_in_stack = current_len
+
+        self._conn.execute(
+            "INSERT INTO image_refs "
+            "(event_uid, field_name, zarr_group, index_in_stack, shape_x, shape_y, dtype, compression_codec) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                event_uid,
+                field_name,
+                zarr_group,
+                index_in_stack,
+                image.shape[0],
+                image.shape[1],
+                str(image.dtype),
+                "blosc",
+            ),
+        )
+
     def close_run(self, *, exit_status: str = "success") -> None:
         """Finalize the current run and commit all pending events.
 
@@ -247,6 +329,7 @@ class RunWriter:
         self._conn.commit()
         self._conn.close()
         self._conn = None
+        self._zarr_store = None
 
     def __enter__(self) -> RunWriter:
         """Open the writer and return self.
