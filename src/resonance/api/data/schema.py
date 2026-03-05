@@ -144,3 +144,124 @@ def migrate_beamtime_schema(
         f"No migration path from schema version {current_version} to {target_version}. "
         "Schema migrations have not yet been implemented."
     )
+
+
+INDEX_SCHEMA_VERSION: Final[int] = 1
+
+_INDEX_DDL = """
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE IF NOT EXISTS researchers (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT NOT NULL,
+    email       TEXT,
+    orcid       TEXT,
+    affiliation TEXT,
+    root_path   TEXT NOT NULL,
+    extra       TEXT
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_researchers_name ON researchers(name);
+
+CREATE TABLE IF NOT EXISTS beamtimes (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    researcher_id INTEGER NOT NULL REFERENCES researchers(id) ON DELETE CASCADE,
+    label         TEXT NOT NULL,
+    db_path       TEXT NOT NULL,
+    time_start    REAL,
+    time_stop     REAL,
+    description   TEXT,
+    extra         TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_beamtimes_researcher ON beamtimes(researcher_id);
+CREATE INDEX IF NOT EXISTS idx_beamtimes_start ON beamtimes(time_start);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_beamtimes_db_path ON beamtimes(db_path);
+
+CREATE TABLE IF NOT EXISTS runs_index (
+    uid           TEXT PRIMARY KEY,
+    researcher_id INTEGER NOT NULL REFERENCES researchers(id) ON DELETE CASCADE,
+    beamtime_id   INTEGER NOT NULL REFERENCES beamtimes(id) ON DELETE CASCADE,
+    plan_name     TEXT NOT NULL,
+    sample_name   TEXT,
+    time_start    REAL NOT NULL,
+    tags          TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_runs_index_plan ON runs_index(plan_name);
+CREATE INDEX IF NOT EXISTS idx_runs_index_sample ON runs_index(sample_name);
+CREATE INDEX IF NOT EXISTS idx_runs_index_time ON runs_index(time_start);
+"""
+
+
+def create_index_schema(conn: sqlite3.Connection) -> None:
+    """
+    Create master index tables, indexes, and pragmas.
+
+    Parameters
+    ----------
+    conn : sqlite3.Connection
+        Open connection to the master index SQLite database file.
+
+    Raises
+    ------
+    sqlite3.DatabaseError
+        If DDL execution fails due to a malformed database or I/O error.
+
+    Notes
+    -----
+    The master index database aggregates metadata from all per-beamtime
+    databases into three tables: ``researchers``, ``beamtimes``, and
+    ``runs_index``. This allows cross-beamtime queries without opening
+    individual session databases. The ``runs_index`` table mirrors key
+    fields from the per-beamtime ``runs`` table, identified by the same
+    ``uid``. Foreign keys are enforced via ``PRAGMA foreign_keys = ON``,
+    which must be re-applied per connection.
+    """
+    conn.executescript(_INDEX_DDL)
+    conn.execute(f"PRAGMA user_version = {INDEX_SCHEMA_VERSION}")
+    conn.commit()
+
+
+def migrate_index_schema(
+    conn: sqlite3.Connection,
+    target_version: int = INDEX_SCHEMA_VERSION,
+) -> None:
+    """
+    Apply pending index schema migrations up to target_version.
+
+    Parameters
+    ----------
+    conn : sqlite3.Connection
+        Open connection to the master index SQLite database file.
+    target_version : int, optional
+        Schema version to migrate to. Defaults to ``INDEX_SCHEMA_VERSION``.
+
+    Raises
+    ------
+    RuntimeError
+        If the database's current ``user_version`` is greater than
+        ``target_version``, indicating a downgrade attempt or a database
+        written by a newer version of this software.
+    NotImplementedError
+        If migrations are required (current_version < target_version) but
+        no migration path has been implemented yet.
+
+    Notes
+    -----
+    Migration steps are applied sequentially from current_version + 1 up to
+    target_version. Version 1 is the initial schema; future versions will add
+    individual ``ALTER TABLE`` or data-transform statements here.
+    """
+    (current_version,) = conn.execute("PRAGMA user_version").fetchone()
+    if current_version == target_version:
+        return
+    if current_version > target_version:
+        raise RuntimeError(
+            f"Index schema version {current_version} is newer than "
+            f"target version {target_version}. Downgrade is not supported."
+        )
+    raise NotImplementedError(
+        f"No migration path from index schema version {current_version} to {target_version}. "
+        "Schema migrations have not yet been implemented."
+    )
