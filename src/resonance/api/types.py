@@ -1,6 +1,7 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal, get_args
 
+import numpy as np
 import pandas as pd
 from uncertainties import Variable
 
@@ -262,6 +263,7 @@ class ScanResult:
     exposure_time: float
     timestamp: float
     raw_data: dict[str, list[float]]  # For debugging
+    image: np.ndarray | None = field(default=None)
 
     def to_series(self) -> pd.Series:
         """Convert to pandas Series with proper column names"""

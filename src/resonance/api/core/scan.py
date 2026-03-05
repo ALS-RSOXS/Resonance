@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from bcs import BCSz
     from uncertainties import Variable
 
+    from resonance.api.core.det import AreaDetector
     from resonance.api.data.writer import RunWriter
 
 
@@ -291,6 +292,7 @@ class ScanExecutor:
         motor_timeout: float = 30.0,
         restore_motors: bool = False,
         use_shutter: bool = True,
+        detector: AreaDetector | None = None,
     ) -> ScanResult:
         """
         Execute a single scan point.
@@ -307,6 +309,10 @@ class ScanExecutor:
         use_shutter : bool
             If True, the shutter is opened and closed around acquisition.
             Pass False when the caller already holds the shutter open.
+        detector : AreaDetector or None, optional
+            If provided, a 2D detector image is acquired after AI acquisition using
+            the point's exposure_time. Shutter actuation is hardware-driven; no
+            plan-level shutter wraps this call.
 
         Returns
         -------
@@ -363,7 +369,7 @@ class ScanExecutor:
                 std_err = float(np.nanstd(data, ddof=1) / np.sqrt(data.size))
                 ai_data[name] = ufloat(mean, std_err)
 
-        return ScanResult(
+        scan_result = ScanResult(
             index=point.index,
             motors=point.motors,
             ai_data=ai_data,
@@ -371,12 +377,16 @@ class ScanExecutor:
             timestamp=time.time(),
             raw_data=raw_data,
         )
+        if detector is not None:
+            scan_result.image = await detector.acquire(point.exposure_time)
+        return scan_result
 
     async def execute_scan(
         self,
         scan_plan: ScanPlan,
         progress: bool = True,
         writer: RunWriter | None = None,
+        detector: AreaDetector | None = None,
     ) -> pd.DataFrame:
         """
         Execute a complete scan plan and return results as a DataFrame.
@@ -414,6 +424,10 @@ class ScanExecutor:
             timestamps) are written to the open beamtime database. The writer
             must not have an open run before this method is called; it will
             call open_run, open_stream, write_event, and close_run internally.
+        detector : AreaDetector or None, optional
+            If provided, a 2D image is acquired at each scan point and written to
+            the "detector_image" field in the primary stream. Requires writer to
+            be set for persistence. Shutter is hardware-driven.
 
         Returns
         -------
@@ -440,6 +454,8 @@ class ScanExecutor:
                 },
                 "exposure": {"dtype": "number", "units": "s", "source": "plan"},
             }
+            if detector is not None:
+                data_keys["detector_image"] = detector.describe()
             # TODO: propagate plan_name from ScanPlan once the attribute is added
             writer.open_run("scan")
             writer.open_stream("primary", data_keys)
@@ -462,6 +478,7 @@ class ScanExecutor:
                     point,
                     restore_motors=False,
                     use_shutter=scan_plan.actuate_every,
+                    detector=detector,
                 )
                 results.append(result)
                 if writer is not None:
@@ -475,7 +492,9 @@ class ScanExecutor:
                         **dict.fromkeys(result.ai_data, result.timestamp),
                         "exposure": result.timestamp,
                     }
-                    writer.write_event(event_data, timestamps)
+                    event_uid = writer.write_event(event_data, timestamps)
+                    if result.image is not None:
+                        writer.write_image(event_uid, "detector_image", result.image)
 
         _exit_status = "success"
         try:
