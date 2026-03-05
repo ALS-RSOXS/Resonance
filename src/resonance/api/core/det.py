@@ -11,6 +11,13 @@ if TYPE_CHECKING:
 DETECTOR_NAME: Final[str] = "Axis Photonique"
 
 
+async def get_acquired2d_string(conn: BCSz.BCSServer, name: str) -> dict[str, Any]:
+    """
+    Get the acquired 2D string from the detector.
+    """
+    return await conn.bcs_request("GetInstrumentAcquired2DString", dict(locals()))
+
+
 @dataclass
 class ExposureQuality:
     """
@@ -92,11 +99,11 @@ class AreaDetector:
         res = await self._conn.start_instrument_acquire(
             name=self._name,
             run_type="Exposure",
-            acq_time_s=exposure_seconds,
+            acq_time_s=exposure_seconds,  # pyright: ignore[reportArgumentType]
         )
         if not res.get("success"):
             return None
-        raw = await self._conn.get_instrument_acquired2d_string(name=self._name)
+        raw = await get_acquired2d_string(self._conn, self._name)
         image = _parse_acquired2d_string(raw)
         self._last_shape = (image.shape[0], image.shape[1])
         return image
@@ -105,9 +112,9 @@ class AreaDetector:
         self,
         image: np.ndarray,
         *,
-        over_threshold: int = 200_000,
+        over_threshold: int = int(2e16),
         over_pixel_count: int = 500,
-        under_threshold: int = 2_000,
+        under_threshold: int = 50,
         under_pixel_count: int = 950_000,
     ) -> ExposureQuality:
         """

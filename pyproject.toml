@@ -70,7 +70,6 @@ dependencies = [
     "pydantic-settings>=2.11.0",
     "pygments==2.19.2",
     "pyparsing==3.2.5",
-    "pyrefly==0.33.1",
     "python-dateutil==2.9.0.post0",
     "pytz==2025.2",
     "pyzmq==27.1.0",

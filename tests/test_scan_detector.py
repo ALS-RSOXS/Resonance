@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import sqlite3
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import numpy as np
@@ -92,7 +92,7 @@ def test_execute_scan_with_detector_writes_images(tmp_path: Path) -> None:
 
     zarr_group = rows[0][3]
     store = zarr.open_group(str(tmp_path / "bt.zarr"), mode="r")
-    arr = store[zarr_group]
+    arr = cast(zarr.Array, store[zarr_group])
     assert arr.shape == (2, 4, 4)
 
 

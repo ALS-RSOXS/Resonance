@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pytest
@@ -122,7 +122,8 @@ def test_write_image_creates_zarr_and_image_refs(tmp_path: Path) -> None:
     assert codec == "blosc"
 
     store = zarr.open_group(str(tmp_path / "bt.zarr"), mode="r")
-    assert store[zarr_group].shape == (1, 4, 4)
+    arr = cast("zarr.Array", store[zarr_group])
+    assert arr.shape == (1, 4, 4)
 
 
 def test_write_image_raises_without_open_stream(tmp_path: Path) -> None:
@@ -155,4 +156,5 @@ def test_write_image_multiple_frames(tmp_path: Path) -> None:
     assert [r[0] for r in rows] == [0, 1, 2]
 
     store = zarr.open_group(str(tmp_path / "bt.zarr"), mode="r")
-    assert store[rows[0][1]].shape == (3, 4, 4)
+    arr = cast("zarr.Array", store[rows[0][1]])
+    assert arr.shape == (3, 4, 4)
