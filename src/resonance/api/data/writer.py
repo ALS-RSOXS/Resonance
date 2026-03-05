@@ -231,6 +231,8 @@ class RunWriter:
             (time.time(), exit_status, self._seq_num, self._run_uid),
         )
         self._conn.commit()
+        self._run_uid = ""
+        self._stream_uid = ""
 
     def close(self) -> None:
         """Commit any remaining work and close the database connection.
@@ -274,13 +276,11 @@ class RunWriter:
         tb : object
             Traceback object if an exception occurred, otherwise None.
         """
-        if exc_type is not None:
-            if self._run_uid:
-                self.close_run(exit_status="failed")
-            self.close()
+        if exc_type is not None and self._run_uid:
+            self.close_run(exit_status="failed")
         elif self._run_uid:
             self.close_run()
-            self.close()
+        self.close()
 
 
 class IndexWriter:
