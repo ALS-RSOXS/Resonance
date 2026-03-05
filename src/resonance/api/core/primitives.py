@@ -6,7 +6,8 @@ from contextlib import asynccontextmanager
 
 from bcs.BCSz import BCSServer, MotorStatus
 
-from .types import MotorError, MotorTimeoutError, ScanAbortedError
+from resonance.api.types import MotorError, MotorTimeoutError, ScanAbortedError
+
 
 # ============================================================================
 # Abort Mechanism
@@ -65,18 +66,15 @@ async def wait_for_motors(
     start_time = time.time()
 
     while True:
-        # Check for abort
         if abort_flag and await abort_flag.is_set():
             raise ScanAbortedError("Scan aborted by user")
 
-        # Check timeout
         elapsed = time.time() - start_time
         if elapsed > timeout:
             raise MotorTimeoutError(
                 f"Motors {motors} did not complete within {timeout}s"
             )
 
-        # Check motor status
         response = await server.get_motor(motors=motors)
         all_complete = True
 
@@ -106,14 +104,12 @@ async def wait_for_settle(delay: float, abort_flag: AbortFlag | None = None) -> 
     if delay <= 0:
         return
 
-    # Check abort every 100ms
     steps = int(delay / 0.1)
     for _ in range(steps):
         if abort_flag and await abort_flag.is_set():
             raise ScanAbortedError("Scan aborted during settle")
         await asyncio.sleep(0.1)
 
-    # Sleep remainder
     remainder = delay - (steps * 0.1)
     if remainder > 0:
         if abort_flag and await abort_flag.is_set():
@@ -156,20 +152,17 @@ async def motor_move(
             pass
         # Motors automatically return to initial_pos
     """
-    # Record initial positions
     initial_response = await server.get_motor(motors=list(motors.keys()))
     initial_pos = {m["motor"]: m["position"] for m in initial_response["data"]}
 
     try:
-        # Move to target positions
-        command = "Backlash Move"  # if backlash else "Backlash Move"
+        command = "Backlash Move"
         await server.command_motor(
             commands=[command] * len(motors),
             motors=list(motors.keys()),
             goals=list(motors.values()),
         )
 
-        # Wait for completion
         await wait_for_motors(server, list(motors.keys()), timeout=timeout)
 
         yield initial_pos
@@ -178,7 +171,6 @@ async def motor_move(
         raise MotorError(f"Motor move failed: {e}") from e
 
     finally:
-        # Return to initial positions if requested
         if restore_on_exit:
             try:
                 await server.command_motor(
@@ -188,7 +180,6 @@ async def motor_move(
                 )
                 await wait_for_motors(server, list(initial_pos.keys()), timeout=timeout)
             except Exception as e:
-                # Log but don't raise - we're in cleanup
                 print(f"Warning: Failed to restore motor positions: {e}")
 
 
@@ -212,16 +203,13 @@ async def shutter_control(
         # Shutter automatically closes
     """
     try:
-        # Wait for settling
         if delay_before_open > 0:
             await asyncio.sleep(delay_before_open)
 
-        # Open shutter
         await server.set_do(chan=shutter, value=True)
         yield
 
     finally:
-        # Always close shutter
         try:
             await server.set_do(chan=shutter, value=False)
         except Exception as e:
