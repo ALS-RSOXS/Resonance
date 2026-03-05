@@ -9,12 +9,15 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from resonance.api.core.ai import AIAccessor
+from resonance.api.core.det import AreaDetector
 from resonance.api.core.dio import DIOAccessor
 from resonance.api.core.motors import MotorAccessor
 from resonance.api.core.scan import ScanExecutor, ScanPlan
 
 if TYPE_CHECKING:
     import pandas as pd
+
+    from resonance.api.data.writer import RunWriter
 
 
 class Connection(BaseSettings):
@@ -75,6 +78,7 @@ class Beamline:
         self.ai = AIAccessor(conn)
         self.motors = MotorAccessor(conn)
         self.dio = DIOAccessor(conn)
+        self.detector = AreaDetector(conn)
         self._executor = ScanExecutor(conn)
         # TODO: add optional detector setup (e.g. CCD warm-up, status check) here
         # TODO: add future EPICS/Bluesky adapter hook when migrating from BCSz
@@ -113,6 +117,7 @@ class Beamline:
         motor_timeout: float = 30.0,
         progress: bool = True,
         actuate_every: bool = False,
+        writer: RunWriter | None = None,
     ) -> pd.DataFrame:
         """
         Execute a scan defined by a DataFrame.
@@ -140,6 +145,10 @@ class Beamline:
         actuate_every : bool, optional
             If True, open/close the shutter per point. If False (default),
             open the shutter once for the entire scan.
+        writer : RunWriter or None, optional
+            If provided, scan data are persisted to the beamtime SQLite database
+            via the writer. The caller is responsible for constructing and
+            opening the writer before passing it here.
 
         Returns
         -------
@@ -159,7 +168,7 @@ class Beamline:
             shutter=shutter,
             actuate_every=actuate_every,
         )
-        return await self._executor.execute_scan(scan_plan, progress=progress)
+        return await self._executor.execute_scan(scan_plan, progress=progress, writer=writer)
 
     async def abort_scan(self) -> None:
         """

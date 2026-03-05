@@ -32,6 +32,8 @@ if TYPE_CHECKING:
     from bcs import BCSz
     from uncertainties import Variable
 
+    from resonance.api.data.writer import RunWriter
+
 
 class ScanPlan:
     """
@@ -374,6 +376,7 @@ class ScanExecutor:
         self,
         scan_plan: ScanPlan,
         progress: bool = True,
+        writer: RunWriter | None = None,
     ) -> pd.DataFrame:
         """
         Execute a complete scan plan and return results as a DataFrame.
@@ -406,6 +409,11 @@ class ScanExecutor:
         progress : bool
             If True and tqdm is installed, show an async progress bar.
             Falls back to simple per-point print statements.
+        writer : RunWriter or None, optional
+            If provided, scalar scan data (motor positions, AI means, exposure,
+            timestamps) are written to the open beamtime database. The writer
+            must not have an open run before this method is called; it will
+            call open_run, open_stream, write_event, and close_run internally.
 
         Returns
         -------
@@ -415,12 +423,26 @@ class ScanExecutor:
 
         Notes
         -----
-        Does not emit Bluesky-compatible start/stop documents; Databroker
-        integration is not yet implemented.
+        # TODO: add Bluesky-compatible start/stop document emission once RunWriter is stable
         """
-        # TODO: emit Bluesky-compatible start/stop documents for future Databroker integration
         self._current_scan = scan_plan
         await self._abort_flag.clear()
+
+        if writer is not None:
+            data_keys: dict[str, dict[str, str]] = {
+                **{
+                    f"{m}_position": {"dtype": "number", "units": "mm", "source": "motor"}
+                    for m in scan_plan.motor_names
+                },
+                **{
+                    ch: {"dtype": "number", "units": "V", "source": "ai"}
+                    for ch in scan_plan.ai_channels
+                },
+                "exposure": {"dtype": "number", "units": "s", "source": "plan"},
+            }
+            # TODO: propagate plan_name from ScanPlan once the attribute is added
+            writer.open_run("scan")
+            writer.open_stream("primary", data_keys)
 
         results: list[ScanResult] = []
 
@@ -442,7 +464,20 @@ class ScanExecutor:
                     use_shutter=scan_plan.actuate_every,
                 )
                 results.append(result)
+                if writer is not None:
+                    event_data: dict[str, float | int | str | bool] = {
+                        **{f"{m}_position": v for m, v in result.motors.items()},
+                        **{ch: result.ai_data[ch].nominal_value for ch in result.ai_data},
+                        "exposure": result.exposure_time,
+                    }
+                    timestamps: dict[str, float] = {
+                        **{f"{m}_position": result.timestamp for m in result.motors},
+                        **dict.fromkeys(result.ai_data, result.timestamp),
+                        "exposure": result.timestamp,
+                    }
+                    writer.write_event(event_data, timestamps)
 
+        _exit_status = "success"
         try:
             if scan_plan.actuate_every:
                 await _run_points()
@@ -451,11 +486,13 @@ class ScanExecutor:
                     await _run_points()
 
         except ScanAbortedError:
+            _exit_status = "aborted"
             print(f"\nScan aborted after {len(results)}/{len(scan_plan.points)} points")
             if not results:
                 raise
 
         except asyncio.CancelledError:
+            _exit_status = "aborted"
             await self._abort_flag.set()
             print(
                 f"\nScan interrupted after {len(results)}/{len(scan_plan.points)} points"
@@ -467,6 +504,8 @@ class ScanExecutor:
 
         finally:
             self._current_scan = None
+            if writer is not None:
+                writer.close_run(exit_status=_exit_status)
             if not progress:
                 print()
 
