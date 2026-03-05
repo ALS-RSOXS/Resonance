@@ -1,4 +1,4 @@
-.PHONY: verify fix lint format format-check type-check install test test-cov test-matrix test-matrix-cov pysentry
+.PHONY: verify fix lint format format-check type-check install test test-cov test-matrix test-matrix-cov docs pysentry
 
 verify: lint format-check type-check
 
@@ -32,6 +32,10 @@ test-matrix:
 
 test-matrix-cov:
 	uv run hatch test --cover
+
+docs:
+	uv sync --extra docs
+	uv run sphinx-build -b html docs docs/_build/html
 
 pysentry:
 	uv run pysentry-rs

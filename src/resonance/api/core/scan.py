@@ -57,45 +57,12 @@ class ScanPlan:
 
     Examples
     --------
-    >>> scan_plan = ScanPlan(
-    ...     points=[
-    ...         ScanPoint(motors={"Sample X": 0.0, "Sample Y": 0.0}, exposure_time=0.1),
-    ...         ScanPoint(motors={"Sample X": 10.0, "Sample Y": 0.0}, exposure_time=0.1),
-    ...         ScanPoint(motors={"Sample X": 20.0, "Sample Y": 0.0}, exposure_time=0.1),
-    ...     ],
-    ...     motor_names=["Sample X", "Sample Y"],
-    ...     ai_channels=["Photodiode", "TEY signal", "AI 3 Izero"],
-    ...     shutter="Light Output",
-    ...     actuate_every=False,
-    ... )
-    >>> print(scan_plan)
-    ScanPlan(points=[ScanPoint(index=0, motors={'Sample X': 0.0, 'Sample Y': 0.0}, exposure_time=0.1, ai_channels=['Photodiode', 'TEY signal', 'AI 3 Izero'], delay_after_move=0.2), ScanPoint(index=1, motors={'Sample X': 10.0, 'Sample Y': 0.0}, exposure_time=0.1, ai_channels=['Photodiode', 'TEY signal', 'AI 3 Izero'], delay_after_move=0.2), ScanPoint(index=2, motors={'Sample X': 20.0, 'Sample Y': 0.0}, exposure_time=0.1, ai_channels=['Photodiode', 'TEY signal', 'AI 3 Izero'], delay_after_move=0.2)], motor_names=['Sample X', 'Sample Y'], ai_channels=['Photodiode', 'TEY signal', 'AI 3 Izero'], shutter='Light Output', actuate_every=False)
-    >>> scan_plan.describe()
-    Scan plan: 3 points, 2 motors
-    Unique values:
-      Sample X: 3
-      Sample Y: 3
-      exposure: 3
-      delay: 3 (0.2 s)
-    Estimated duration: 0.6 s
-
-    You can also build a scan plan from a DataFrame:
     >>> df = pd.DataFrame({
     ...     "Sample X": [0, 10, 20],
     ...     "Sample Y": [0, 0, 0],
     ...     "exposure": [0.1, 0.1, 0.1],
     ... })
-    >>> scan_plan = ScanPlan.from_dataframe(df)
-    >>> print(scan_plan)
-    ScanPlan(points=[ScanPoint(index=0, motors={'Sample X': 0.0, 'Sample Y': 0.0}, exposure_time=0.1, ai_channels=['Photodiode', 'TEY signal', 'AI 3 Izero'], delay_after_move=0.2), ScanPoint(index=1, motors={'Sample X': 10.0, 'Sample Y': 0.0}, exposure_time=0.1, ai_channels=['Photodiode', 'TEY signal', 'AI 3 Izero'], delay_after_move=0.2), ScanPoint(index=2, motors={'Sample X': 20.0, 'Sample Y': 0.0}, exposure_time=0.1, ai_channels=['Photodiode', 'TEY signal', 'AI 3 Izero'], delay_after_move=0.2)], motor_names=['Sample X', 'Sample Y'], ai_channels=['Photodiode', 'TEY signal', 'AI 3 Izero'], shutter='Light Output', actuate_every=False)
-    >>> scan_plan.describe()
-    Scan plan: 3 points, 2 motors
-    Unique values:
-      Sample X: 3
-      Sample Y: 3
-      exposure: 3
-      delay: 3 (0.2 s)
-    Estimated duration: 0.6 s
+    >>> scan_plan = ScanPlan.from_dataframe(df, ai_channels=["Photodiode"])
     """
 
     def __init__(
