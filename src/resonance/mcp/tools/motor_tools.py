@@ -2,8 +2,10 @@
 
 from typing import Any
 
+from resonance.api.types import motor
+
 from ..connection import connection_manager
-from ..models import MotorListResponse, MotorStatusResponse
+from ..models import MotorListResponse, MotorPositionsResponse, MotorStatusResponse
 
 
 async def list_motors() -> dict[str, Any]:
@@ -15,22 +17,7 @@ async def list_motors() -> dict[str, Any]:
     dict
         Response with motors list
     """
-    try:
-        await connection_manager.ensure_connected()
-        server = await connection_manager.get_server()
-
-        result = await server.list_motors()
-        if not result.get("success", False):
-            raise RuntimeError(
-                f"Failed to list motors: {result.get('error description', 'Unknown error')}"
-            )
-
-        motors = result.get("names", [])
-        response = MotorListResponse(motors=motors)
-        return response.model_dump()
-
-    except Exception as e:
-        raise RuntimeError(f"Error listing motors: {e}") from e
+    return MotorListResponse(motors=list(motor)).model_dump()
 
 
 async def get_motor_positions(motors: list[str] | None = None) -> dict[str, Any]:
@@ -56,12 +43,12 @@ async def get_motor_positions(motors: list[str] | None = None) -> dict[str, Any]
     """
     try:
         await connection_manager.ensure_connected()
-        server = await connection_manager.get_server()
-        if not motors:
-            list_result = (await server.list_motors())["names"]
-            motors = list_result
-        result = await server.motor.table(motors)
-        return result.status.to_dict()
+        beamline = await connection_manager.get_server()
+
+        target = motors if motors else list(motor)
+        result = await beamline.motors.read(*target)
+        positions = {name: state.position for name, state in result.items()}
+        return MotorPositionsResponse(positions=positions).model_dump()
 
     except (ConnectionError, RuntimeError, ValueError):
         raise
@@ -92,40 +79,19 @@ async def get_motor_status(motors: list[str] | None = None) -> dict[str, Any]:
     """
     try:
         await connection_manager.ensure_connected()
-        server = await connection_manager.get_server()
+        beamline = await connection_manager.get_server()
 
-        if not motors:
-            list_result = await server.list_motors()
-            if not list_result.get("success", False):
-                error_msg = list_result.get("error description", "Unknown error")
-                raise RuntimeError(f"Failed to list motors: {error_msg}")
-            motors = list_result.get("motors", [])
-
-        if not motors:
-            return MotorStatusResponse(status={}).model_dump()
-
-        try:
-            result = await server.motor.table(motors)
-        except KeyError as e:
-            raise ValueError(f"Invalid motor name: {e}") from e
-
-        status_dict = {}
-
-        for motor_data in result.status.to_dict("records"):
-            motor_name = motor_data.get("motor", "")
-            if not motor_name:
-                continue
-            try:
-                status_dict[motor_name] = {
-                    "position": float(motor_data.get("position", 0.0)),
-                    "goal": float(motor_data.get("goal", 0.0)),
-                    "status": int(motor_data.get("status", 0)),
-                }
-            except (ValueError, TypeError) as e:
-                raise ValueError(f"Invalid motor data for {motor_name}: {e}") from e
-
-        response = MotorStatusResponse(status=status_dict)
-        return response.model_dump()
+        target = motors if motors else list(motor)
+        result = await beamline.motors.read(*target)
+        status_dict = {
+            name: {
+                "position": state.position,
+                "goal": state.goal,
+                "status": state.status,
+            }
+            for name, state in result.items()
+        }
+        return MotorStatusResponse(status=status_dict).model_dump()
 
     except (ConnectionError, RuntimeError, ValueError):
         raise
