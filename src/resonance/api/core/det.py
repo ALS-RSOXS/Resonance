@@ -19,6 +19,13 @@ async def get_acquired2d_string(conn: BCSz.BCSServer, name: str) -> dict[str, An
     return await conn.bcs_request("GetInstrumentAcquired2DString", dict(locals()))
 
 
+async def get_acquired2d_base85(conn: BCSz.BCSServer, name: str) -> dict[str, Any]:
+    """
+    Get the acquired 2D string from the detector.
+    """
+    return await conn.bcs_request("GetInstrumentAcquired2DBase85", dict(locals()))
+
+
 @dataclass
 class ExposureQuality:
     """

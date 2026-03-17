@@ -88,6 +88,7 @@ dependencies = [
     "uncertainties>=3.2.3",
     "wcwidth==0.2.13",
     "zarr>=3.1.5",
+    "seaborn>=0.13.2",
 ]
 
 [project.urls]
@@ -121,11 +122,8 @@ dev = [
     "pysentry-rs>=0.1.0",
 ]
 bcs = [
-    "bcs"
+    "bcs",
 ]
-
-[tool.uv.sources]
-bcs = { git = "https://github.com/ALS-RSOXS/bcs-install" }
 
 [tool.hatch.build.targets.sdist]
 include = ["/src"]
@@ -186,6 +184,9 @@ known-first-party = ["resonance"]
 [tool.ty.src]
 include = ["**/*.py"]
 
+[tool.uv]
+link-mode = "hardlink"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
@@ -218,3 +219,6 @@ show_missing = true
 
 [tool.git-cliff]
 config = "cliff.toml"
+
+[tool.uv.sources]
+bcs = { path = "../../../bcs-install" }
