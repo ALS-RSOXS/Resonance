@@ -125,6 +125,14 @@ bcs = [
     "bcs",
 ]
 
+[tool.uv.sources]
+bcs = { git = "https://github.com/ALS-RSOXS/bcs-install" }
+
+[tool.uv.workspace]
+members = [
+    "bcs-rs",
+]
+
 [tool.hatch.build.targets.sdist]
 include = ["/src"]
 
