@@ -1,0 +1,79 @@
+name: bcs-rs release
+
+on:
+  push:
+    tags:
+      - "bcs-rs/v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build wheels — ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS — Apple Silicon (native) and Intel
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: macos-latest
+            target: x86_64-apple-darwin
+
+          # Windows — x86_64 and ARM64 via MSVC
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+
+          # Linux — x86_64 (manylinux) and ARM64 (cross via QEMU)
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          working-directory: bcs-rs
+          target: ${{ matrix.target }}
+          args: --release --out dist
+          # manylinux for Linux targets; auto elsewhere
+          manylinux: auto
+          # QEMU needed for Linux ARM64 cross-compilation
+          before-script-linux: |
+            if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
+              sudo apt-get install -y gcc-aarch64-linux-gnu
+            fi
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.target }}
+          path: bcs-rs/dist/*.whl
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write  # required for trusted publishing (OIDC)
+    steps:
+      - name: Download all wheels
+        uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: dist
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Publish to PyPI
+        run: uv publish dist/*.whl
