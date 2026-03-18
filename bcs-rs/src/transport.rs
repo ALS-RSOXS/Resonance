@@ -113,20 +113,28 @@ impl BcsConnection {
         port: u16,
         recv_timeout: Duration,
         send_timeout: Duration,
+        use_curve: bool,
     ) -> Result<Self, BcsError> {
         let ctx = Context::new();
-        let server_key = fetch_server_public_key(&ctx, addr, port)?;
-        let client_pair = CurveKeyPair::new().map_err(BcsError::Zmq)?;
         let req = ctx.socket(zmq::REQ).map_err(BcsError::Zmq)?;
-        req.set_curve_serverkey(&server_key).map_err(BcsError::Zmq)?;
-        req.set_curve_publickey(&client_pair.public_key).map_err(BcsError::Zmq)?;
-        req.set_curve_secretkey(&client_pair.secret_key).map_err(BcsError::Zmq)?;
         req.set_rcvtimeo(duration_to_ms(recv_timeout)).map_err(BcsError::Zmq)?;
         req.set_sndtimeo(duration_to_ms(send_timeout)).map_err(BcsError::Zmq)?;
-        let secure_endpoint = format!("tcp://{}:{}", addr, port + 1);
-        req.connect(&secure_endpoint).map_err(|e| {
-            BcsError::Connect(format!("{}: {}", secure_endpoint, e))
-        })?;
+        if use_curve {
+            let server_key = fetch_server_public_key(&ctx, addr, port)?;
+            let client_pair = CurveKeyPair::new().map_err(BcsError::Zmq)?;
+            req.set_curve_serverkey(&server_key).map_err(BcsError::Zmq)?;
+            req.set_curve_publickey(&client_pair.public_key).map_err(BcsError::Zmq)?;
+            req.set_curve_secretkey(&client_pair.secret_key).map_err(BcsError::Zmq)?;
+            let secure_endpoint = format!("tcp://{}:{}", addr, port + 1);
+            req.connect(&secure_endpoint).map_err(|e| {
+                BcsError::Connect(format!("{}: {}", secure_endpoint, e))
+            })?;
+        } else {
+            let endpoint = format!("tcp://{}:{}", addr, port);
+            req.connect(&endpoint).map_err(|e| {
+                BcsError::Connect(format!("{}: {}", endpoint, e))
+            })?;
+        }
         Ok(BcsConnection { _ctx: ctx, req })
     }
 

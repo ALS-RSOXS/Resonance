@@ -10,6 +10,7 @@ class BcsConnection:
         port: int,
         recv_timeout_ms: int | None = ...,
         send_timeout_ms: int | None = ...,
+        use_curve: bool = ...,
     ) -> None: ...
     def bcs_request(
         self, command_name: str, params: dict[str, Any]

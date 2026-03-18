@@ -126,7 +126,7 @@ bcs = [
 ]
 
 [tool.uv.sources]
-bcs = { git = "https://github.com/ALS-RSOXS/bcs-install" }
+bcs = { path = "../../../bcs-install" }
 
 [tool.uv.workspace]
 members = [
@@ -227,6 +227,3 @@ show_missing = true
 
 [tool.git-cliff]
 config = "cliff.toml"
-
-[tool.uv.sources]
-bcs = { path = "../../../bcs-install" }

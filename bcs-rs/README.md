@@ -8,7 +8,6 @@
 
 The design goal is that Python code uses a small, stable API in `bcs_rs._core` while Rust handles all low-level transport, timing, and blob decoding.
 
----
 
 ## Current Python BCSz behavior (for context)
 

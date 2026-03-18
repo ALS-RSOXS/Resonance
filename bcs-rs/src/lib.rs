@@ -134,15 +134,17 @@ mod _core {
     #[pymethods]
     impl BcsConnection {
         #[new]
+        #[pyo3(signature = (addr, port, recv_timeout_ms=None, send_timeout_ms=None, use_curve=true))]
         fn new(
             addr: String,
             port: u16,
             recv_timeout_ms: Option<u64>,
             send_timeout_ms: Option<u64>,
+            use_curve: bool,
         ) -> PyResult<Self> {
             let recv = Duration::from_millis(recv_timeout_ms.unwrap_or(5000));
             let send = Duration::from_millis(send_timeout_ms.unwrap_or(5000));
-            let conn = transport::BcsConnection::connect(&addr, port, recv, send)?;
+            let conn = transport::BcsConnection::connect(&addr, port, recv, send, use_curve)?;
             Ok(Self {
                 inner: Mutex::new(conn),
             })
