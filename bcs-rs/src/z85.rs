@@ -221,40 +221,34 @@ unsafe fn decode_block_ssse3(src: &[u8; 20]) -> Result<[u8; 16], Z85Error> {
     #[inline]
     #[target_feature(enable = "ssse3")]
     unsafe fn lookup64(table: &[u8; 64], idx: __m128i) -> __m128i {
-        let sixteen = unsafe { _mm_set1_epi8(16i8) };
+        let sixteen = _mm_set1_epi8(16i8);
         let t0 = unsafe { _mm_loadu_si128(table[0..].as_ptr() as *const __m128i) };
         let t1 = unsafe { _mm_loadu_si128(table[16..].as_ptr() as *const __m128i) };
         let t2 = unsafe { _mm_loadu_si128(table[32..].as_ptr() as *const __m128i) };
         let t3 = unsafe { _mm_loadu_si128(table[48..].as_ptr() as *const __m128i) };
 
-        // sub_k = idx - k*16.  For slice k's valid range [k*16, k*16+15],
-        // sub_k ∈ [0, 15].  Out-of-range → bit 7 set (underflow) or > 15 (mask).
         let sub0 = idx;
-        let sub1 = unsafe { _mm_sub_epi8(idx, _mm_set1_epi8(16)) };
-        let sub2 = unsafe { _mm_sub_epi8(idx, _mm_set1_epi8(32)) };
-        let sub3 = unsafe { _mm_sub_epi8(idx, _mm_set1_epi8(48)) };
+        let sub1 = _mm_sub_epi8(idx, _mm_set1_epi8(16));
+        let sub2 = _mm_sub_epi8(idx, _mm_set1_epi8(32));
+        let sub3 = _mm_sub_epi8(idx, _mm_set1_epi8(48));
 
-        // _mm_cmpgt_epi8(16, sub_k): 0xFF where sub_k < 16 (signed), zeroing
-        // the shuffle result for sub_k ∈ [16, 127].  sub_k < 0 is handled by
-        // the shuffle itself (returns 0 when bit 7 set).
-        let r0 = unsafe { _mm_and_si128(_mm_cmpgt_epi8(sixteen, sub0), _mm_shuffle_epi8(t0, sub0)) };
-        let r1 = unsafe { _mm_and_si128(_mm_cmpgt_epi8(sixteen, sub1), _mm_shuffle_epi8(t1, sub1)) };
-        let r2 = unsafe { _mm_and_si128(_mm_cmpgt_epi8(sixteen, sub2), _mm_shuffle_epi8(t2, sub2)) };
-        let r3 = unsafe { _mm_and_si128(_mm_cmpgt_epi8(sixteen, sub3), _mm_shuffle_epi8(t3, sub3)) };
+        let r0 = _mm_and_si128(_mm_cmpgt_epi8(sixteen, sub0), _mm_shuffle_epi8(t0, sub0));
+        let r1 = _mm_and_si128(_mm_cmpgt_epi8(sixteen, sub1), _mm_shuffle_epi8(t1, sub1));
+        let r2 = _mm_and_si128(_mm_cmpgt_epi8(sixteen, sub2), _mm_shuffle_epi8(t2, sub2));
+        let r3 = _mm_and_si128(_mm_cmpgt_epi8(sixteen, sub3), _mm_shuffle_epi8(t3, sub3));
 
-        unsafe { _mm_or_si128(_mm_or_si128(r0, r1), _mm_or_si128(r2, r3)) }
+        _mm_or_si128(_mm_or_si128(r0, r1), _mm_or_si128(r2, r3))
     }
 
     // ── First 16 input bytes → 16 digit values ────────────────────────────
     // SAFETY: src has 20 bytes; reading 16 from offset 0 is in-bounds.
     let b0 = unsafe { _mm_loadu_si128(src.as_ptr() as *const __m128i) };
 
-    let idx_lo = unsafe { _mm_sub_epi8(b0, _mm_set1_epi8(32i8)) };
-    let idx_hi = unsafe { _mm_sub_epi8(b0, _mm_set1_epi8(96i8)) };
-    let d0 = unsafe { _mm_or_si128(lookup64(&SIMD_LO, idx_lo), lookup64(&SIMD_HI, idx_hi)) };
+    let idx_lo = _mm_sub_epi8(b0, _mm_set1_epi8(32i8));
+    let idx_hi = _mm_sub_epi8(b0, _mm_set1_epi8(96i8));
+    let d0 = _mm_or_si128(lookup64(&SIMD_LO, idx_lo), lookup64(&SIMD_HI, idx_hi));
 
-    // ── Validity check for first 16 digits ───────────────────────────────
-    if unsafe { _mm_movemask_epi8(_mm_cmpeq_epi8(d0, _mm_setzero_si128())) } != 0 {
+    if _mm_movemask_epi8(_mm_cmpeq_epi8(d0, _mm_setzero_si128())) != 0 {
         return Err(find_invalid_byte(src));
     }
 
@@ -267,8 +261,7 @@ unsafe fn decode_block_ssse3(src: &[u8; 20]) -> Result<[u8; 16], Z85Error> {
         return Err(find_invalid_byte(src));
     }
 
-    // ── Subtract 1, extract 16 digits from SIMD register ─────────────────
-    let d0s = unsafe { _mm_sub_epi8(d0, _mm_set1_epi8(1)) };
+    let d0s = _mm_sub_epi8(d0, _mm_set1_epi8(1));
 
     // Store to stack array — one movdqu, avoids SSE4.1 _mm_extract_epi8.
     let mut lanes = [0u8; 16];

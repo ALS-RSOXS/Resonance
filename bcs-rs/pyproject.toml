@@ -1,6 +1,6 @@
 [project]
 name = "bcs-rs"
-version = "0.1.8"
+version = "0.1.9"
 description = "High-performance Rust extension for BCS data decoding"
 readme = "README.md"
 authors = [
