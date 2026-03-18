@@ -108,8 +108,8 @@ class ScanPlan:
             column.
         default_delay : float
             Settle delay in seconds after each motor move.
-        shutter : str
-            DIO channel name of the light shutter.
+        shutter : str or None
+            DIO channel name of the light shutter. If None, the shutter is not used
         actuate_every : bool
             Per-point shutter mode.
 
