@@ -1,4 +1,4 @@
-site_name: resonance
+site_name: "als-rsoxs: resonance"
 site_description: ALS-RSOXS beamline control toolkit for typed device access, scan orchestration, and MCP integration
 site_url: https://als-rsoxs.github.io/auto-reflect/
 repo_url: https://github.com/ALS-RSOXS/auto-reflect
@@ -73,6 +73,14 @@ extra_css:
 
 nav:
   - Home: index.md
+  - Beamline:
+      - Overview: beamline/index.md
+      - Optical path: beamline/optical-path.md
+      - Sample and detector geometry: beamline/sample-and-detector-geometry.md
+      - Motors: beamline/motors.md
+      - Analog inputs: beamline/analog-inputs.md
+      - Digital I/O: beamline/digital-io.md
+      - Area detector: beamline/area-detector.md
   - User Guide:
       - Installation: user_guide/installation.md
       - Quick Start: user_guide/quickstart.md
