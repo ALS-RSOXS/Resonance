@@ -33,9 +33,13 @@ test-matrix:
 test-matrix-cov:
 	uv run hatch test --cover
 
-docs:
-	UV_NO_SOURCES=1 uv sync --extra docs
-	UV_NO_SOURCES=1 uv run mkdocs build
-
+# Dependency vulnerability scanning
 pysentry:
 	uv run pysentry-rs
+
+# Documentation
+docs:
+	uv run mkdocs build
+
+docs-serve:
+	uv run mkdocs serve

@@ -147,14 +147,6 @@ wheels = [
 ]
 
 [[package]]
-name = "bcs"
-version = "0.1.0"
-source = { registry = "https://pypi.org/simple" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c4/a9/1a1c171fdbef362527eb8063c26514a4fb89ba791c2bd468f8a48e973791/bcs-0.1-py3-none-any.whl", hash = "sha256:98eb6dd1d1fc041803e4261edaee316fde86830912ba5fabbd04dd7d1b2fcb24", size = 1022, upload-time = "2023-02-02T16:09:38.832Z" },
-]
-
-[[package]]
 name = "bcs-rs"
 version = "0.1.9"
 source = { editable = "bcs-rs" }
@@ -2387,9 +2379,6 @@ docs = [
 ]
 
 [package.dev-dependencies]
-bcs = [
-    { name = "bcs" },
-]
 dev = [
     { name = "hatch" },
     { name = "prek" },
@@ -2471,7 +2460,6 @@ requires-dist = [
 provides-extras = ["docs"]
 
 [package.metadata.requires-dev]
-bcs = [{ name = "bcs" }]
 dev = [
     { name = "hatch", specifier = ">=1.16.3" },
     { name = "prek", specifier = ">=0.1.0" },

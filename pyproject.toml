@@ -119,12 +119,12 @@ dev = [
     "prek>=0.1.0",
     "pysentry-rs>=0.1.0",
 ]
-bcs = [
-    "bcs",
-]
+#bcs = [
+#    "bcs",
+#]
 
-[tool.uv.sources]
-bcs = { path = "../../../bcs-install" }
+#[tool.uv.sources]
+#bcs = { path = "../../../bcs-install" }
 
 [tool.uv.workspace]
 members = [

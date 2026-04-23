@@ -7,6 +7,8 @@ edit_uri: edit/main/docs/
 
 theme:
   name: material
+  logo: assets/als-logo.png
+  favicon: assets/als-favicon-32x32.png
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -63,11 +65,11 @@ markdown_extensions:
       permalink: true
 
 extra_javascript:
-  - _static/javascripts/mathjax.js
+  - javascripts/mathjax.js
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
 
 extra_css:
-  - _static/stylesheets/als.css
+  - stylesheets/als.css
 
 nav:
   - Home: index.md
