@@ -1,0 +1,91 @@
+site_name: resonance
+site_description: ALS-RSOXS beamline control toolkit for typed device access, scan orchestration, and MCP integration
+site_url: https://als-rsoxs.github.io/auto-reflect/
+repo_url: https://github.com/ALS-RSOXS/auto-reflect
+repo_name: ALS-RSOXS/auto-reflect
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - content.code.copy
+    - content.code.annotate
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - toc.follow
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            docstring_style: numpy
+            merge_init_into_class: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+
+extra_javascript:
+  - _static/javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+
+extra_css:
+  - _static/stylesheets/als.css
+
+nav:
+  - Home: index.md
+  - User Guide:
+      - Installation: user_guide/installation.md
+      - Quick Start: user_guide/quickstart.md
+  - API Reference:
+      - Beamline: api/beamline.md
+      - Scan: api/scan.md
+      - Detector: api/det.md
+      - Motors: api/motors.md
+      - Analog Inputs: api/ai.md
+      - Digital I/O: api/dio.md
+      - Data: api/data.md
+      - Types: api/types.md
+      - Utilities: api/utils.md
+      - MCP: api/mcp.md
+  - Examples:
+      - Grid Scan: examples/grid_scan.md
+      - Run Writer: examples/run_writer.md
+  - Contributing: contributing.md

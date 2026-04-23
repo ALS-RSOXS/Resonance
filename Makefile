@@ -34,8 +34,8 @@ test-matrix-cov:
 	uv run hatch test --cover
 
 docs:
-	uv sync --extra docs
-	uv run sphinx-build -b html docs docs/_build/html
+	UV_NO_SOURCES=1 uv sync --extra docs
+	UV_NO_SOURCES=1 uv run mkdocs build
 
 pysentry:
 	uv run pysentry-rs

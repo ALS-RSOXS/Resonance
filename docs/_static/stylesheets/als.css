@@ -1,0 +1,109 @@
+:root {
+  --als-sky-darkest: #073048;
+  --als-sky-dark: #004c70;
+  --als-sky-mid: #095b87;
+  --als-sky-light: #0886ca;
+  --als-slate-dark: #464b53;
+  --als-slate-mid: #64768d;
+  --als-slate-light: #c1d3e3;
+  --als-finch-border: #004b71;
+  --als-finch-border-hover: #52bee2;
+  --als-finch-surface: #f0f5f9;
+  --als-finch-neutral-border: #ced7dc;
+  --als-surface-default: #ffffff;
+  --als-text-default: #1f2933;
+  --als-code-surface: #f4f7fa;
+}
+
+body {
+  color: var(--als-text-default);
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.01em;
+}
+
+a {
+  color: var(--als-finch-border);
+}
+
+a:hover {
+  color: var(--als-finch-border-hover);
+}
+
+.sidebar-brand-text,
+.toc-title,
+.sidebar-tree .reference.current {
+  color: var(--als-sky-dark);
+}
+
+.sidebar-search-container input[type="search"] {
+  border: 1px solid var(--als-finch-neutral-border);
+  border-radius: 0.45rem;
+}
+
+div.highlight pre,
+code.literal {
+  background: var(--als-code-surface);
+  border-radius: 0.45rem;
+}
+
+table.docutils th {
+  background-color: var(--als-finch-surface);
+  color: var(--als-sky-darkest);
+}
+
+table.docutils tr:nth-child(even) td {
+  background-color: #f8fbfd;
+}
+
+.admonition {
+  border-color: var(--als-finch-neutral-border);
+  border-radius: 0.5rem;
+}
+
+.admonition-title {
+  background-color: var(--als-finch-surface);
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    color: #d7e3ef;
+    background: #111a21;
+  }
+
+  a {
+    color: #9acffc;
+  }
+
+  .sidebar-brand-text,
+  .toc-title,
+  .sidebar-tree .reference.current {
+    color: var(--als-sky-light);
+  }
+
+  .sidebar-search-container input[type="search"] {
+    border-color: var(--als-slate-mid);
+    background: #16252f;
+  }
+
+  div.highlight pre,
+  code.literal {
+    background: #16252f;
+  }
+
+  table.docutils th {
+    color: #d7e3ef;
+    background-color: #1e2f3b;
+  }
+
+  table.docutils tr:nth-child(even) td {
+    background-color: #15232d;
+  }
+
+  .admonition-title {
+    background-color: #1e2f3b;
+  }
+}
