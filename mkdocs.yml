@@ -76,17 +76,7 @@ nav:
   - User Guide:
       - Installation: user_guide/installation.md
       - Quick Start: user_guide/quickstart.md
-  - API Reference:
-      - Beamline: api/beamline.md
-      - Scan: api/scan.md
-      - Detector: api/det.md
-      - Motors: api/motors.md
-      - Analog Inputs: api/ai.md
-      - Digital I/O: api/dio.md
-      - Data: api/data.md
-      - Types: api/types.md
-      - Utilities: api/utils.md
-      - MCP: api/mcp.md
+  - API Reference: api.md
   - Examples:
       - Grid Scan: examples/grid_scan.md
       - Run Writer: examples/run_writer.md

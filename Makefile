@@ -39,6 +39,7 @@ pysentry:
 
 # Documentation
 docs:
+	uv sync --extra docs
 	uv run mkdocs build
 
 docs-serve:

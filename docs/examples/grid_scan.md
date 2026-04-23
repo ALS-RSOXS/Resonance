@@ -23,5 +23,4 @@ asyncio.run(main())
 
 Related references:
 
-- [Utilities](../api/utils.md)
-- [Scan](../api/scan.md)
+- [API Reference](../api.md)

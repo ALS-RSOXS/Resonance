@@ -107,15 +107,19 @@ jobs:
           components: rustfmt, clippy
 
       - name: Check formatting
+        working-directory: bcs-rs
         run: cargo fmt --all -- --check
 
       - name: Compile crate
+        working-directory: bcs-rs
         run: cargo check --all-targets
 
       - name: Run clippy
+        working-directory: bcs-rs
         run: cargo clippy --all-targets -- -D warnings
 
       - name: Run Rust tests
+        working-directory: bcs-rs
         run: cargo test --all-targets
 
   dependency_scan:

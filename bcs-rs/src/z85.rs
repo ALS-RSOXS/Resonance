@@ -346,17 +346,14 @@ fn decode_chunk(input: &[u8], out: &mut [u8]) -> Result<(), Z85Error> {
 
 #[inline]
 fn alloc_uninit(n: usize) -> Vec<u8> {
-    let mut v = Vec::with_capacity(n);
-    // SAFETY: u8 has no invalid bit patterns; caller writes every byte before Ok.
-    unsafe { v.set_len(n) };
-    v
+    vec![0; n]
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /// Decode a z85-encoded byte slice into raw bytes (single-threaded).
 pub fn decode_scalar(input: &[u8]) -> Result<Vec<u8>, Z85Error> {
-    if input.len() % 5 != 0 {
+    if !input.len().is_multiple_of(5) {
         return Err(Z85Error::InvalidLength(input.len()));
     }
     let mut out = alloc_uninit(input.len() / 5 * 4);
@@ -366,7 +363,7 @@ pub fn decode_scalar(input: &[u8]) -> Result<Vec<u8>, Z85Error> {
 
 /// Decode a z85-encoded byte slice into raw bytes (Rayon parallel).
 pub fn decode_parallel(input: &[u8]) -> Result<Vec<u8>, Z85Error> {
-    if input.len() % 5 != 0 {
+    if !input.len().is_multiple_of(5) {
         return Err(Z85Error::InvalidLength(input.len()));
     }
     let mut out = alloc_uninit(input.len() / 5 * 4);

@@ -41,7 +41,4 @@ asyncio.run(main())
 
 See API pages for details:
 
-- [Beamline](../api/beamline.md)
-- [Scan](../api/scan.md)
-- [AI accessor](../api/ai.md)
-- [Motor accessor](../api/motors.md)
+- [API Reference](../api.md)

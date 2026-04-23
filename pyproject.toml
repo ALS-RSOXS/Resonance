@@ -188,7 +188,7 @@ known-first-party = ["resonance"]
 "tests/**/*.py" = ["ARG001"]
 
 [tool.ty.src]
-include = ["**/*.py"]
+include = ["src/**/*.py", "tests/**/*.py"]
 
 [tool.uv]
 link-mode = "hardlink"

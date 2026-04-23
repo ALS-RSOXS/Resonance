@@ -68,7 +68,7 @@ fn python_to_serde_value(obj: Bound<'_, PyAny>) -> PyResult<Value> {
         return Ok(Value::Array(arr));
     }
     if let Ok(d) = obj.cast::<PyDict>() {
-        let map = python_to_serde_map(&d)?;
+        let map = python_to_serde_map(d)?;
         return Ok(Value::Object(Map::from_iter(map)));
     }
     if obj.hasattr("__iter__")? && !obj.is_instance_of::<PyString>() {

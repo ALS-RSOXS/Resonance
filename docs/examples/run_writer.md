@@ -20,4 +20,4 @@ writer.close()
 
 Related reference:
 
-- [Data models and writers](../api/data.md)
+- [API Reference](../api.md)
