@@ -37,7 +37,7 @@ class AIAccessor:
         self._conn = conn
 
     async def read(self, *channels: str) -> dict[str, list[float]]:
-        """Return the last-acquired raw array for each channel.
+        """Return the current value of each channel.
 
         Parameters
         ----------
@@ -58,10 +58,8 @@ class AIAccessor:
 
         Notes
         -----
-        Does not trigger a new acquisition. Returns the most recent data
-        buffered by BCS. Call `trigger_and_read` to acquire fresh data.
-        Use `read` only when data was already acquired (e.g. after `acquire_data`
-        was called externally).
+        Does not trigger a new acquisition. Returns the current value of each channel.
+        Call `trigger_and_read` to acquire fresh data and get the mean and standard error.
         """
         invalid = [c for c in channels if c not in _AI_CHANNELS]
         if invalid:
@@ -69,14 +67,22 @@ class AIAccessor:
                 f"Invalid AI channel(s): {invalid}. Valid channels: {list(_AI_CHANNELS)}"
             )
 
-        response: dict = await self._conn.get_acquired_array(chans=list(channels))
+        response: dict = await self._conn.get_freerun(chans=list(channels))
+        chans = response.get('chans', [])
+        data = response.get('data', [])
+        not_found = response.get('not found', [])
+
+        if not chans or len(chans) != len(data):
+            raise AcquisitionError(f"Inconsistent response: chans={chans}, data={data}")
+
+        if not_found:
+            raise KeyError(f"AI channel(s) not found: {not_found}")
         result: dict[str, list[float]] = {}
-        for entry in response["chans"]:
-            name: str = entry["chan"]
-            data: list[float] = entry["data"]
-            if not data:
-                raise AcquisitionError(f"Empty data returned for channel '{name}'")
-            result[name] = data
+        for chan, value in zip(chans, data):
+            if value is None or (isinstance(value, float) and np.isnan(value)):
+                raise AcquisitionError(f"Empty or invalid data returned for channel '{chan}'")
+            result[chan] = [value]
+
         return result
 
     async def trigger_and_read(
