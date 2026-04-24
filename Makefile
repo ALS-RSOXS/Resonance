@@ -37,10 +37,9 @@ test-matrix-cov:
 pysentry:
 	uv run pysentry-rs
 
-# Documentation
+# Documentation (mkdocs is in project optional-dependencies "docs")
 docs:
-	uv sync --extra docs
-	uv run mkdocs build
+	uv run --extra docs mkdocs build
 
 docs-serve:
-	uv run mkdocs serve
+	uv run --extra docs mkdocs serve

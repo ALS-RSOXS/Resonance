@@ -1,0 +1,7 @@
+# `resonance.api.data.catalog`
+
+::: resonance.api.data.catalog
+    options:
+      show_root_heading: true
+      show_source: true
+      members_order: source

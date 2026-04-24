@@ -1,14 +1,23 @@
 site_name: "als-rsoxs: resonance"
 site_description: ALS-RSOXS beamline control toolkit for typed device access, scan orchestration, and MCP integration
-site_url: https://als-rsoxs.github.io/auto-reflect/
-repo_url: https://github.com/ALS-RSOXS/auto-reflect
-repo_name: ALS-RSOXS/auto-reflect
+site_url: https://als-rsoxs.github.io/resonance/
+repo_url: https://github.com/als-rsoxs/resonance
+repo_name: als-rsoxs/resonance
 edit_uri: edit/main/docs/
 
+extra:
+  als_group:
+    full_name: ALS RSOXS Group Project
+    acronym: REIXS
+    github_url: https://github.com/als-rsoxs
+    reixs_url: https://als.lbl.gov/science/photon-science-programs/rixs-program/
+
 theme:
-  name: material
-  logo: assets/als-logo.png
-  favicon: assets/als-favicon-32x32.png
+  name: rsoxs
+  show_title: true
+  show_stargazers: true
+  topbar_sections: false
+  katex_options: {}
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -36,6 +45,7 @@ theme:
     - toc.follow
 
 plugins:
+  - rsoxs
   - search
   - mkdocstrings:
       handlers:
@@ -68,24 +78,56 @@ extra_javascript:
   - javascripts/mathjax.js
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
 
-extra_css:
-  - stylesheets/als.css
-
 nav:
   - Home: index.md
   - Beamline:
-      - Overview: beamline/index.md
-      - Optical path: beamline/optical-path.md
-      - Sample and detector geometry: beamline/sample-and-detector-geometry.md
-      - Motors: beamline/motors.md
-      - Analog inputs: beamline/analog-inputs.md
-      - Digital I/O: beamline/digital-io.md
-      - Area detector: beamline/area-detector.md
+      - "Layout and geometry":
+          - Overview: beamline/index.md
+          - "Optical path": beamline/optical-path.md
+          - "Sample and detector geometry": beamline/sample-and-detector-geometry.md
+      - "Controls and sensing":
+          - Motors: beamline/motors.md
+          - "Analog inputs": beamline/analog-inputs.md
+          - "Digital I/O": beamline/digital-io.md
+          - "Area detector": beamline/area-detector.md
   - User Guide:
-      - Installation: user_guide/installation.md
-      - Quick Start: user_guide/quickstart.md
-  - API Reference: api.md
+      - Guides:
+          - Installation: user_guide/installation.md
+          - "Quick Start": user_guide/quickstart.md
+  - API Reference:
+      - Overview: api.md
+      - Resonance API:
+          - Overview: api-reference/resonance-api/index.md
+          - Types: api-reference/resonance-api/types.md
+          - Header Map: api-reference/resonance-api/header_map.md
+          - Utils: api-reference/resonance-api/utils.md
+          - Validation: api-reference/resonance-api/validation.md
+          - Core:
+              - AI Accessor: api-reference/resonance-api/core/ai.md
+              - Beamline: api-reference/resonance-api/core/beamline.md
+              - Detector: api-reference/resonance-api/core/det.md
+              - DIO Accessor: api-reference/resonance-api/core/dio.md
+              - Motor Accessor: api-reference/resonance-api/core/motors.md
+              - Primitives: api-reference/resonance-api/core/primitives.md
+              - Scan: api-reference/resonance-api/core/scan.md
+          - Data:
+              - Catalog: api-reference/resonance-api/data/catalog.md
+              - Compression: api-reference/resonance-api/data/compression.md
+              - Models: api-reference/resonance-api/data/models.md
+              - Schema: api-reference/resonance-api/data/schema.md
+              - Writer: api-reference/resonance-api/data/writer.md
+      - MCP:
+          - Overview: api-reference/mcp/index.md
+          - Connection: api-reference/mcp/connection.md
+          - Models: api-reference/mcp/models.md
+          - Server: api-reference/mcp/server.md
+          - Main Entrypoint: api-reference/mcp/main.md
+          - Tools:
+              - AI Tools: api-reference/mcp/tools/ai_tools.md
+              - DIO Tools: api-reference/mcp/tools/dio_tools.md
+              - Motor Tools: api-reference/mcp/tools/motor_tools.md
   - Examples:
-      - Grid Scan: examples/grid_scan.md
-      - Run Writer: examples/run_writer.md
+      - "Example workflows":
+          - "Grid scan": examples/grid_scan.md
+          - "Run writer": examples/run_writer.md
   - Contributing: contributing.md
