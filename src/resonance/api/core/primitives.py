@@ -6,7 +6,7 @@ import warnings
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from bcs.BCSz import BCSServer, MotorStatus
+from bcs_rs.BCSz import BCSServer, MotorStatus
 
 from resonance.api.types import MotorError, MotorTimeoutError, ScanAbortedError
 

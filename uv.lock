@@ -154,17 +154,8 @@ wheels = [
 ]
 
 [[package]]
-name = "bcs"
-version = "0.1.0"
-source = { directory = "../../../bcs-install" }
-
-[package.metadata]
-requires-dist = [{ name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1.300" }]
-provides-extras = ["dev"]
-
-[[package]]
 name = "bcs-rs"
-version = "0.1.6"
+version = "0.1.9"
 source = { editable = "bcs-rs" }
 
 [package.dev-dependencies]
@@ -2329,6 +2320,7 @@ dependencies = [
     { name = "altair" },
     { name = "asttokens" },
     { name = "asyncstdlib" },
+    { name = "bcs-rs" },
     { name = "colorama" },
     { name = "comm" },
     { name = "contourpy" },
@@ -2400,9 +2392,6 @@ docs = [
 ]
 
 [package.dev-dependencies]
-bcs = [
-    { name = "bcs" },
-]
 dev = [
     { name = "hatch" },
     { name = "prek" },
@@ -2418,6 +2407,7 @@ requires-dist = [
     { name = "altair", specifier = ">=6.0.0" },
     { name = "asttokens", specifier = "==3.0.0" },
     { name = "asyncstdlib", specifier = ">=3.13.1" },
+    { name = "bcs-rs", editable = "bcs-rs" },
     { name = "colorama", specifier = "==0.4.6" },
     { name = "comm", specifier = "==0.2.3" },
     { name = "contourpy", specifier = "==1.3.3" },
@@ -2486,7 +2476,6 @@ requires-dist = [
 provides-extras = ["docs"]
 
 [package.metadata.requires-dev]
-bcs = [{ name = "bcs", directory = "../../../bcs-install" }]
 dev = [
     { name = "hatch", specifier = ">=1.16.3" },
     { name = "prek", specifier = ">=0.1.0" },

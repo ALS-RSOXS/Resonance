@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, get_args
 from resonance.api.types import DIO, ShutterError
 
 if TYPE_CHECKING:
-    from bcs import BCSz
+    from bcs_rs.BCSz import BCSServer
 
 _valid_channels: tuple[str, ...] = get_args(DIO.__value__)
 
@@ -18,7 +18,7 @@ class DIOAccessor:
 
     Parameters
     ----------
-    conn : BCSz.BCSServer
+    conn : BCSServer
         Active BCSz server connection.
 
     Notes
@@ -39,7 +39,7 @@ class DIOAccessor:
     {'Shutter Output': False, 'Light Output': True}
     """
 
-    def __init__(self, conn: BCSz.BCSServer) -> None:
+    def __init__(self, conn: BCSServer) -> None:
         self._conn = conn
 
     async def read(self, *channels: str) -> dict[str, bool]:

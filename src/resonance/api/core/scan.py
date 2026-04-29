@@ -30,7 +30,7 @@ from resonance.api.validation import validate_scan_dataframe
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from bcs import BCSz
+    from bcs_rs.BCSz import BCSServer
     from uncertainties import Variable
 
     from resonance.api.core.det import AreaDetector
@@ -259,11 +259,11 @@ class ScanExecutor:
 
     Parameters
     ----------
-    conn : BCSz.BCSServer
+    conn : BCSServer
         Active BCS server connection.
     """
 
-    def __init__(self, conn: BCSz.BCSServer) -> None:
+    def __init__(self, conn: BCSServer) -> None:
         self._conn = conn
         self._abort_flag = AbortFlag()
         self._current_scan: ScanPlan | None = None

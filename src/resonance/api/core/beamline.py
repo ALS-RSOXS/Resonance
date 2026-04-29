@@ -4,7 +4,7 @@ import io
 from contextlib import redirect_stdout
 from typing import TYPE_CHECKING
 
-from bcs import BCSz
+from bcs_rs.BCSz import BCSServer
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -52,7 +52,7 @@ class Beamline:
 
     Parameters
     ----------
-    conn : BCSz.BCSServer
+    conn : BCSServer
         Connected BCS server instance. Use `Beamline.create()` to
         construct with automatic connection from environment variables.
 
@@ -73,7 +73,7 @@ class Beamline:
     >>> results = await bl.scan_from_dataframe(scan_df, ai_channels=["Photodiode"])
     """
 
-    def __init__(self, conn: BCSz.BCSServer) -> None:
+    def __init__(self, conn: BCSServer) -> None:
         self._conn = conn
         self.ai = AIAccessor(conn)
         self.motors = MotorAccessor(conn)
@@ -102,7 +102,7 @@ class Beamline:
             If the BCS server is unreachable or connection fails.
         """
         config = Connection()
-        server = BCSz.BCSServer()
+        server = BCSServer()
         buff = io.StringIO()
         with redirect_stdout(buff):
             await server.connect(**config.model_dump())

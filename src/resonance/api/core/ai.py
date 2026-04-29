@@ -8,7 +8,7 @@ from uncertainties import Variable, ufloat
 from resonance.api.types import AI, AcquisitionError
 
 if TYPE_CHECKING:
-    from bcs import BCSz
+    from bcs_rs.BCSz import BCSServer
 
 _AI_CHANNELS: tuple[str, ...] = get_args(AI.__value__)
 
@@ -18,7 +18,7 @@ class AIAccessor:
 
     Parameters
     ----------
-    conn : BCSz.BCSServer
+    conn : BCSServer
         Active connection to the BCS hardware server.
 
     Notes
@@ -33,7 +33,7 @@ class AIAccessor:
     {'Photodiode': [0.0], 'TEY signal': [0.0], 'AI 3 Izero': [0.0]}
     """
 
-    def __init__(self, conn: BCSz.BCSServer) -> None:
+    def __init__(self, conn: BCSServer) -> None:
         self._conn = conn
 
     async def read(self, *channels: str) -> dict[str, list[float]]:

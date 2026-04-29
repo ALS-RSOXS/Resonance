@@ -5,21 +5,22 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Final
 
 import numpy as np
+from bcs_rs import decode_z85_parallel
 
 if TYPE_CHECKING:
-    from bcs import BCSz
+    from bcs_rs.BCSz import BCSServer
 
 AXIS_PHOTONIQUE: Final[str] = "Axis Photonique"
 
 
-async def get_acquired2d_string(conn: BCSz.BCSServer, name: str) -> dict[str, Any]:
+async def get_acquired2d_string(conn: BCSServer, name: str) -> dict[str, Any]:
     """
     Get the acquired 2D string from the detector.
     """
     return await conn.bcs_request("GetInstrumentAcquired2DString", dict(locals()))
 
 
-async def get_acquired2d_base85(conn: BCSz.BCSServer, name: str) -> dict[str, Any]:
+async def get_acquired2d_base85(conn: BCSServer, name: str) -> dict[str, Any]:
     """
     Get the acquired 2D string from the detector.
     """
@@ -46,7 +47,7 @@ class ExposureQuality:
     suggested_exposure_seconds: float | None
 
 
-def _parse_acquired2d_string(payload: dict[str, Any]) -> np.ndarray:
+def parse_base85(payload: dict[str, Any]) -> np.ndarray:
     """
     Parse the BCSz GetInstrumentAcquired2DString response into a 2-D array.
 
@@ -61,11 +62,9 @@ def _parse_acquired2d_string(payload: dict[str, Any]) -> np.ndarray:
     np.ndarray
         Integer array of dtype ``int32`` and shape ``(height, width)``.
     """
-    height: int = int(payload["Height"])
-    width: int = int(payload["Width"])
-    tokens = [t for t in payload["Data"].split(",") if t.strip()]
-    return np.array(tokens, dtype=np.int32).reshape(height, width)
-
+    height, width, s = payload["Height"], payload["Width"], payload["Data"]
+    raw = decode_z85_parallel(s)
+    return np.frombuffer(raw, dtype=np.uint32).reshape(int(height), int(width))
 
 class AreaDetector:
     """
@@ -73,7 +72,7 @@ class AreaDetector:
 
     Parameters
     ----------
-    conn : BCSz.BCSServer
+    conn : BCSServer
         Active BCSz server connection.
     name : str, optional
         Instrument name registered in BCSz, defaults to ``Axis Photonique``.
@@ -91,7 +90,7 @@ class AreaDetector:
     {'dtype': 'int32', 'source': 'detector', 'external': True, 'shape': [1024, 1024]}
     """
 
-    def __init__(self, conn: BCSz.BCSServer, *, name: str = AXIS_PHOTONIQUE) -> None:
+    def __init__(self, conn: BCSServer, *, name: str = AXIS_PHOTONIQUE) -> None:
         self._conn = conn
         self._name = name
         self._last_shape: tuple[int, int] | None = None
@@ -169,8 +168,8 @@ class AreaDetector:
         )
         if not res.get("success"):
             return None
-        raw = await get_acquired2d_string(self._conn, self._name)
-        image = _parse_acquired2d_string(raw)
+        raw = await self._conn.get_instrument_acquired2d_base85(name=self._name)
+        image = parse_base85(raw)
         self._last_shape = (image.shape[0], image.shape[1])
         return image
 
