@@ -1,8 +1,8 @@
 site_name: "als-rsoxs: resonance"
 site_description: ALS-RSOXS beamline control toolkit for typed device access, scan orchestration, and MCP integration
-site_url: https://als-rsoxs.github.io/resonance/
-repo_url: https://github.com/als-rsoxs/resonance
-repo_name: als-rsoxs/resonance
+site_url: https://als-rsoxs.github.io/Resonance/
+repo_url: https://github.com/als-rsoxs/Resonance
+repo_name: als-rsoxs/Resonance
 edit_uri: edit/main/docs/
 
 extra:
