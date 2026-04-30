@@ -1412,16 +1412,16 @@ wheels = [
 
 [[package]]
 name = "mkdocs-rsoxs"
-version = "0.1.0"
+version = "0.1.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bottle" },
     { name = "gitpython" },
     { name = "mkdocs" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2b/89/d62769e09e808bd3d77dcf9d626dfddd82bf4f52511b1da39500e08990e9/mkdocs_rsoxs-0.1.0.tar.gz", hash = "sha256:2e87d1c6576ac14392978cf76333777ebdd6eef6a6970cf36c70d47d1fefe2ff", size = 1496200, upload-time = "2026-04-24T02:23:18.586Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/55/c6/bedb700487d711d1e868a76e3d3bba73de554b2c71c02db7b1d4a27a0060/mkdocs_rsoxs-0.1.2.tar.gz", hash = "sha256:177aa77edefe5d340f7d0760dd5cd961baaa59ff4d28b262f15312edf4d78512", size = 1498459, upload-time = "2026-04-30T23:05:16.088Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2c/5a/cf7e34dc6d25e9db9e8443f63f66bc58bd68325e6cae76486e7600a86af3/mkdocs_rsoxs-0.1.0-py3-none-any.whl", hash = "sha256:909b7695952a2cb2fdeb9a5b96024ac0b803f0e4843f658dcaece34eebc02d6a", size = 1571571, upload-time = "2026-04-24T02:23:16.623Z" },
+    { url = "https://files.pythonhosted.org/packages/70/40/715b039953e63d04f61fd9c83dcdba107abe8fa04d0cc7b0349fe8af0da8/mkdocs_rsoxs-0.1.2-py3-none-any.whl", hash = "sha256:ae7e8375c20ac344593a5f85bac9d0f50e4d0b8e997839e28593cccb7cf341d8", size = 1575317, upload-time = "2026-04-30T23:05:14.318Z" },
 ]
 
 [[package]]
@@ -2398,7 +2398,7 @@ requires-dist = [
     { name = "matplotlib-inline", specifier = "==0.1.7" },
     { name = "mcp", specifier = ">=1.25.0" },
     { name = "mkdocs", marker = "extra == 'docs'", specifier = ">=1.6.0" },
-    { name = "mkdocs-rsoxs", marker = "extra == 'docs'", specifier = ">=0.1.0" },
+    { name = "mkdocs-rsoxs", marker = "extra == 'docs'", specifier = ">=0.1.2" },
     { name = "mkdocstrings-python", marker = "extra == 'docs'", specifier = ">=2.0.1" },
     { name = "nest-asyncio", specifier = "==1.6.0" },
     { name = "numpy", specifier = "==2.3.3" },

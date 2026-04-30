@@ -104,7 +104,7 @@ mcp-beamline = "resonance.mcp.__main__:main"
 [project.optional-dependencies]
 docs = [
     "mkdocs>=1.6.0",
-    "mkdocs-rsoxs>=0.1.0",
+    "mkdocs-rsoxs>=0.1.2",
     "mkdocstrings-python>=2.0.1",
     "pymdown-extensions>=10.0.0",
 ]
@@ -123,7 +123,7 @@ dev = [
 #    "bcs",
 #]
 
-#[tool.uv.sources]
+[tool.uv.sources]
 #bcs = { path = "../../../bcs-install" }
 
 [tool.uv.workspace]
